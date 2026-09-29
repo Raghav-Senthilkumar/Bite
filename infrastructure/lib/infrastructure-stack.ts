@@ -4,11 +4,102 @@ import * as apigwv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import * as integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as cognito from 'aws-cdk-lib/aws-cognito';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { Construct } from 'constructs';
 
 export class InfrastructureStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
+
+    const userPool = new cognito.UserPool(this, 'UserPool', {
+      userPoolName: 'bite-users',
+      selfSignUpEnabled: false,
+      signInAliases: {
+        email: true,
+      },
+      standardAttributes: {
+        email: {
+          required: true,
+          mutable: true,
+        },
+        givenName: {
+          required: false,
+          mutable: true,
+        },
+        familyName: {
+          required: false,
+          mutable: true,
+        },
+      },
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+
+    const googleCredentials =
+      secretsmanager.Secret.fromSecretNameV2(
+        this,
+        'GoogleOAuthCredentials',
+        'bite/google-oauth',
+      );
+
+    const googleProvider =
+      new cognito.UserPoolIdentityProviderGoogle(
+        this,
+        'GoogleIdentityProvider',
+        {
+          userPool,
+          clientId: googleCredentials
+            .secretValueFromJson('clientId')
+            .unsafeUnwrap(),
+          clientSecretValue:
+            googleCredentials.secretValueFromJson('clientSecret'),
+          scopes: ['openid', 'email', 'profile'],
+          attributeMapping: {
+            email: cognito.ProviderAttribute.GOOGLE_EMAIL,
+            emailVerified:
+              cognito.ProviderAttribute.GOOGLE_EMAIL_VERIFIED,
+            givenName:
+              cognito.ProviderAttribute.GOOGLE_GIVEN_NAME,
+            familyName:
+              cognito.ProviderAttribute.GOOGLE_FAMILY_NAME,
+            profilePicture:
+              cognito.ProviderAttribute.GOOGLE_PICTURE,
+          },
+        },
+      );
+
+    const userPoolClient = userPool.addClient('WebClient', {
+      userPoolClientName: 'bite-web',
+      generateSecret: false,
+      preventUserExistenceErrors: true,
+      oAuth: {
+        flows: {
+          authorizationCodeGrant: true,
+        },
+        scopes: [
+          cognito.OAuthScope.OPENID,
+          cognito.OAuthScope.EMAIL,
+          cognito.OAuthScope.PROFILE,
+        ],
+        callbackUrls: [
+          'http://localhost:5173/auth/callback',
+        ],
+        logoutUrls: [
+          'http://localhost:5173/',
+        ],
+      },
+      supportedIdentityProviders: [
+        cognito.UserPoolClientIdentityProvider.GOOGLE,
+      ],
+    });
+
+    userPoolClient.node.addDependency(googleProvider);
+
+    const userPoolDomain = userPool.addDomain('UserPoolDomain', {
+      cognitoDomain: {
+        domainPrefix: `bite-${cdk.Aws.ACCOUNT_ID}`,
+      },
+    });
 
     const usersTable = new dynamodb.Table(this, 'UsersTable', {
       partitionKey: {
@@ -158,6 +249,18 @@ export class InfrastructureStack extends cdk.Stack {
 
     new cdk.CfnOutput(this, 'ApiUrl', {
       value: api.apiEndpoint,
+    });
+
+    new cdk.CfnOutput(this, 'CognitoUserPoolId', {
+      value: userPool.userPoolId,
+    });
+
+    new cdk.CfnOutput(this, 'CognitoUserPoolClientId', {
+      value: userPoolClient.userPoolClientId,
+    });
+
+    new cdk.CfnOutput(this, 'CognitoDomainUrl', {
+      value: userPoolDomain.baseUrl(),
     });
   }
 }

@@ -21,6 +21,46 @@ test('creates the public health endpoint', () => {
   });
 });
 
+test('creates Google OAuth authentication for the web app', () => {
+  const template = createTemplate();
+
+  template.hasResourceProperties('AWS::Cognito::UserPool', {
+    UserPoolName: 'bite-users',
+    AdminCreateUserConfig: {
+      AllowAdminCreateUserOnly: true,
+    },
+  });
+
+  template.hasResourceProperties('AWS::Cognito::UserPoolIdentityProvider', {
+    ProviderName: 'Google',
+    ProviderType: 'Google',
+    ProviderDetails: {
+      authorize_scopes: 'openid email profile',
+    },
+    AttributeMapping: {
+      email: 'email',
+      email_verified: 'email_verified',
+      given_name: 'given_name',
+      family_name: 'family_name',
+      picture: 'picture',
+    },
+  });
+
+  template.hasResourceProperties('AWS::Cognito::UserPoolClient', {
+    ClientName: 'bite-web',
+    GenerateSecret: false,
+    AllowedOAuthFlows: ['code'],
+    AllowedOAuthFlowsUserPoolClient: true,
+    AllowedOAuthScopes: ['openid', 'email', 'profile'],
+    CallbackURLs: ['http://localhost:5173/auth/callback'],
+    LogoutURLs: ['http://localhost:5173/'],
+    SupportedIdentityProviders: ['Google'],
+  });
+
+  template.resourceCountIs('AWS::Cognito::UserPoolDomain', 1);
+  template.hasOutput('CognitoDomainUrl', {});
+});
+
 test('creates all six retained on-demand tables', () => {
   const template = createTemplate();
   const tables = template.findResources('AWS::DynamoDB::Table');
