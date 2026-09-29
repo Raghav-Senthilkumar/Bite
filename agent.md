@@ -90,8 +90,11 @@ Any proposed implementation must strictly adhere to these rules from `docs/bite-
 
 4. **Deterministic Pantry Coverage**:
    - Zero LLM usage for ranking recipes.
-   - Coverage formula: `matched / required` (excluding water, salt, pepper; oils remain required).
-   - Sort: 1. Coverage descending -> 2. Missing count ascending -> 3. Publication date descending.
+   - Pantry entries include positive `quantity` and canonical `unit` values and are bounded to 500 entries.
+   - Ingredient statuses are `SUFFICIENT`, `INSUFFICIENT`, `UNKNOWN_AMOUNT`, or `MISSING`.
+   - Coverage formula: `sufficient / required` (excluding water, salt, pepper; oils remain required and quantity-aware).
+   - Readiness is `READY`, `MAYBE`, or `NOT_READY`; never claim cookability for `MAYBE` or `NOT_READY`.
+   - Sort: readiness -> coverage descending -> missing plus insufficient count ascending -> publication date descending.
 
 5. **AI Assistant Constraints**:
    - Small tool-using loop using Bedrock Converse API inside the API Lambda.
@@ -114,7 +117,7 @@ Work through the implementation in this sequence:
 - **Milestone 1 — Foundation**: CDK baseline, DynamoDB tables, SQS + DLQ, HTTP API, health Lambda, private S3/CloudFront SPA.
 - **Milestone 2 — Authentication**: Cognito User Pool + Google IdP + PKCE frontend flow + `/api/me`.
 - **Milestone 3 — Substack Vertical Slice**: Add creator, Substack RSS discovery Lambda, SQS extraction worker, Bedrock structured recipe extraction, and import status UI.
-- **Milestone 4 — Pantry & Cook Now**: Ingredient normalization, pantry editor, deterministic ranking engine, matched/missing ingredient UI.
+- **Milestone 4 — Pantry & Cook Now**: Ingredient and unit normalization, quantity-aware pantry editor, deterministic readiness engine, sufficient/insufficient/unknown/missing ingredient UI.
 - **Milestone 5 — Assistant**: Bedrock Converse tool loop, scoped recipe/pantry tools, bounded session chat.
 - **Milestone 6 — Scheduled Verification**: EventBridge daily trigger (6:00 AM ET), manual "Check now" with cooldown, CloudWatch monitoring.
 

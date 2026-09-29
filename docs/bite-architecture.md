@@ -10,7 +10,7 @@ By tomorrow, one user should be able to:
 4. See import progress and failures.
 5. Browse globally shared, deduplicated recipes from followed creators.
 6. Maintain a private pantry.
-7. Rank recipes by pantry coverage.
+7. Rank recipes by quantity-aware pantry readiness.
 8. Ask an AI cooking assistant about accessible recipes, missing ingredients, and substitutions.
 9. Leave the system running and verify that the daily job discovers new Substack posts.
 
@@ -126,15 +126,34 @@ Key: `userId` (Cognito `sub`)
   "displayName": "Jane",
   "pictureUrl": "https://...",
   "pantry": [
-    { "name": "olive oil", "normalizedName": "olive oil" },
-    { "name": "garlic", "normalizedName": "garlic" }
+    {
+      "name": "olive oil",
+      "normalizedName": "olive oil",
+      "quantity": 500,
+      "unit": "milliliter",
+      "updatedAt": "ISO-8601"
+    },
+    {
+      "name": "garlic",
+      "normalizedName": "garlic",
+      "quantity": 6,
+      "unit": "clove",
+      "updatedAt": "ISO-8601"
+    }
   ],
   "createdAt": "ISO-8601",
   "updatedAt": "ISO-8601"
 }
 ```
 
-The pantry can remain on the user record for the MVP because it is small and is replaced atomically.
+The pantry can remain on the user record for the MVP because it is bounded to 500
+entries, ingredient names are limited to 100 characters, units to 32 characters,
+and the backend rejects a serialized user item above 350 KB to retain headroom
+below DynamoDB's 400 KB item limit. It is replaced atomically. `quantity` must be
+a positive decimal and `unit` must be canonicalized when the pantry is saved. The
+`PUT /api/pantry` endpoint replaces the complete validated pantry list and updates
+the user record's `updatedAt`. Cooking a recipe does not automatically consume
+inventory in the MVP; users manually update pantry amounts.
 
 ### `Creators`
 
@@ -237,9 +256,9 @@ There is no ingredients GSI and no cook-time-only GSI. The API queries recipes f
 ### `ChatMessages`
 
 - Partition key: `sessionId`
-- Sort key: `createdAt#messageId`
+- Sort key: `messageKey`, whose value is `createdAt#messageId`
 - GSI: `userId` + `updatedAt`
-- TTL on expired messages
+- TTL attribute: `expiresAt`
 
 Store each message separately. Never append an unbounded conversation to one DynamoDB item.
 
@@ -317,22 +336,46 @@ The UI shows:
 
 This fan-out is acceptable for a few followed creators. Introduce a feed projection only when measurements show it is necessary; do not duplicate recipe bodies.
 
-### Deterministic pantry score
+### Deterministic pantry readiness
 
-Normalize ingredient names during extraction and pantry entry. Start with lowercase, singularization, punctuation removal, and a small alias map. Ignore water, salt, and pepper when calculating coverage. Oils remain normal pantry ingredients because their availability and type can materially affect a recipe.
+Normalize ingredient names and units during extraction and pantry entry. Start
+with lowercase, singularization, punctuation removal, and a small alias map.
+Support deterministic conversions within compatible unit families, such as
+kilograms to grams, liters to milliliters, and tablespoons to milliliters. Never
+infer density-based weight/volume conversions or unreliable conversions such as
+garlic bulbs to cloves. Ignore water, salt, and pepper when calculating readiness.
+Oils remain normal pantry ingredients because their availability, type, and amount
+can materially affect a recipe.
+
+Assign every required ingredient exactly one status:
+
+- `SUFFICIENT`: matching pantry ingredient exists and its comparable quantity meets the recipe requirement.
+- `INSUFFICIENT`: matching pantry ingredient exists, but its comparable quantity is too low.
+- `UNKNOWN_AMOUNT`: the ingredient exists, but a quantity is missing, vague, or cannot be converted safely.
+- `MISSING`: no matching pantry ingredient exists.
 
 ```text
-required = non-optional recipe ingredients excluding configured staples
-matched  = required ingredients matched by canonical name or alias
-coverage = matched / required
+required  = non-optional recipe ingredients excluding configured staples
+satisfied = required ingredients with status SUFFICIENT
+coverage  = satisfied / required
+
+readiness:
+  READY     = every required ingredient is SUFFICIENT
+  MAYBE     = none are MISSING or INSUFFICIENT, but at least one is UNKNOWN_AMOUNT
+  NOT_READY = at least one is MISSING or INSUFFICIENT
 
 sort by:
-  1. coverage descending
-  2. missing count ascending
-  3. publication date descending
+  1. readiness: READY, then MAYBE, then NOT_READY
+  2. coverage descending
+  3. missing + insufficient count ascending
+  4. publication date descending
 ```
 
-Return the matched and missing ingredients so the UI and AI assistant can explain the result. Keep this calculation deterministic; do not pay for an LLM call just to rank recipes.
+Return sufficient, insufficient, unknown-amount, and missing ingredients, including
+required and available quantities when comparable, so the UI and AI assistant can
+explain the result. Keep this calculation deterministic; do not pay for an LLM
+call just to rank recipes. The assistant must not claim the user can cook a recipe
+when readiness is `MAYBE` or `NOT_READY`.
 
 ## 8. AI cooking assistant
 
@@ -351,6 +394,7 @@ Rules:
 - Tools always scope data using the authenticated Cognito `sub`.
 - `get_recipe` verifies that the recipe belongs to a creator the user follows.
 - The model may explain substitutions, but it does not mutate the pantry or follow list.
+- Pantry tools expose normalized quantities and deterministic readiness results; the model does not estimate unverified amounts.
 - The assistant may answer general cooking questions, but it clearly distinguishes general advice from facts retrieved from the user's followed recipes.
 - Limit tool rounds, input history, output tokens, and messages per user per day.
 - Send only the most recent bounded conversation window plus retrieved recipe context.
@@ -373,7 +417,7 @@ GET    /api/recipes/{recipeId}
 GET    /api/recipes/cook-now
 
 GET    /api/pantry
-PUT    /api/pantry                { ingredients }
+PUT    /api/pantry                { ingredients: [{ name, quantity, unit }] }
 
 POST   /api/chat                  { sessionId?, message }
 GET    /api/chat/{sessionId}
@@ -434,10 +478,10 @@ Success: one public Substack becomes browsable recipes without duplicate extract
 
 - pantry editor
 - ingredient normalization
-- deterministic coverage ranking
-- matched/missing ingredient UI
+- deterministic quantity-aware readiness ranking
+- sufficient/insufficient/unknown/missing ingredient UI
 
-Success: pantry edits immediately change recipe ordering and explanations.
+Success: pantry amount edits immediately change recipe ordering, readiness, and explanations.
 
 ### Milestone 5 — assistant
 
@@ -472,7 +516,9 @@ These are not needed to validate the MVP and should not be provisioned yet.
 ## 13. Locked MVP defaults
 
 - Extract every confidently identified recipe from a source post.
-- Ignore water, salt, and pepper in pantry coverage; treat oils as pantry ingredients.
+- Store pantry quantities and canonical units; bound the pantry to 500 entries.
+- Ignore water, salt, and pepper in pantry readiness; treat oils as quantity-aware pantry ingredients.
+- Never claim a recipe is cookable when required quantities are missing, insufficient, or not safely comparable.
 - Keep canonical recipes read-only.
 - Deploy primarily in `us-east-1`.
 - Run daily discovery at 6:00 AM `America/New_York`.
