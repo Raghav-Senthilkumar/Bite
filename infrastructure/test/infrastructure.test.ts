@@ -3,10 +3,64 @@ import { Template } from 'aws-cdk-lib/assertions';
 import { InfrastructureStack } from '../lib/infrastructure-stack';
 
 function createTemplate(): Template {
-  const app = new cdk.App();
+  const app = new cdk.App({ context: { skipBundling: true } });
   const stack = new InfrastructureStack(app, 'TestStack');
   return Template.fromStack(stack);
 }
+
+test('creates the extraction queue, DLQ, and partial batch worker', () => {
+  const template = createTemplate();
+
+  template.resourceCountIs('AWS::SQS::Queue', 2);
+  template.hasResourceProperties('AWS::SQS::Queue', {
+    RedrivePolicy: {
+      maxReceiveCount: 3,
+    },
+  });
+  template.hasResourceProperties('AWS::Lambda::Function', {
+    Handler: 'bite_backend.extraction.handler',
+    Architectures: ['x86_64'],
+    Timeout: 90,
+    Environment: {
+      Variables: {
+        BEDROCK_MODEL_ID: 'zai.glm-4.7-flash',
+      },
+    },
+  });
+  template.hasResourceProperties('AWS::Lambda::EventSourceMapping', {
+    BatchSize: 5,
+    FunctionResponseTypes: ['ReportBatchItemFailures'],
+    ScalingConfig: {
+      MaximumConcurrency: 2,
+    },
+  });
+});
+
+test('runs discovery daily at 6 AM America New York', () => {
+  const template = createTemplate();
+
+  template.hasResourceProperties('AWS::Scheduler::Schedule', {
+    ScheduleExpression: 'cron(0 6 * * ? *)',
+    ScheduleExpressionTimezone: 'America/New_York',
+  });
+});
+
+test('protects application routes with a JWT authorizer', () => {
+  const template = createTemplate();
+
+  template.hasResourceProperties('AWS::ApiGatewayV2::Authorizer', {
+    AuthorizerType: 'JWT',
+    IdentitySource: ['$request.header.Authorization'],
+  });
+  template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
+    RouteKey: 'POST /api/creators',
+    AuthorizationType: 'JWT',
+  });
+  template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
+    RouteKey: 'GET /api/recipes',
+    AuthorizationType: 'JWT',
+  });
+});
 
 test('creates the public health endpoint', () => {
   const template = createTemplate();
