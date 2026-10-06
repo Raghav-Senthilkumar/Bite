@@ -1,28 +1,66 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fredoka:wght@600;700&display=swap');
 
 :root {
-  font-family: 'DM Sans', sans-serif;
-  color: #292721;
-  background: #f8f5ee;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #2E2E2E;
+  background: #F9F9F6;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  --ink: #292721;
-  --muted: #726e63;
-  --cream: #f8f5ee;
-  --paper: #fffdf8;
-  --line: #e4ded1;
-  --orange: #df5b2b;
-  --orange-dark: #bd421b;
-  --sage: #65745c;
-  --sage-light: #e7eadf;
+  --ink: #2E2E2E;
+  --muted: rgba(46, 46, 46, 0.56);
+  --bg: #F9F9F6;
+  --surface: #FFFFFF;
+  --green: #00A859;
+  --green-dark: #008A47;
+  --lime: #D7F0A2;
+  --lime-hover: #CBEB8B;
+  --mint: #EAF7EE;
+  --line: rgba(46, 46, 46, 0.1);
 }
 
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-body { margin: 0; min-width: 320px; min-height: 100vh; }
-button, input { font: inherit; }
-button, a { -webkit-tap-highlight-color: transparent; }
-button { cursor: pointer; }
-h1, h2, h3, p { margin-top: 0; }
-#root { min-height: 100vh; }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+
+#root {
+  min-height: 100vh;
+}
