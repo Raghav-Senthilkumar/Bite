@@ -61,6 +61,19 @@ p {
   margin: 0;
 }
 
+img,
+svg {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+}
+
+img::selection,
+svg::selection {
+  background: transparent;
+}
+
 #root {
   min-height: 100vh;
 }

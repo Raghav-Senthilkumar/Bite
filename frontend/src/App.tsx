@@ -152,26 +152,54 @@ function RecipeDetail({
   onClose: () => void;
   onSelectCategory: (category: string) => void;
 }) {
+  const [closing, setClosing] = useState(false);
   const imageSrc = recipe.image || getRecipeImageFromGuid(recipe.guid, recipe.id);
 
+  const handleClose = useCallback(() => {
+    setClosing(true);
+    window.setTimeout(() => {
+      onClose();
+    }, 250);
+  }, [onClose]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        handleClose();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [handleClose]);
+
   return (
-    <div className="dialog-backdrop" role="presentation" onMouseDown={onClose}>
+    <div
+      className={`dialog-backdrop ${closing ? 'is-closing' : ''}`}
+      role="presentation"
+      onMouseDown={handleClose}
+    >
       <article
-        className="recipe-detail"
+        className={`recipe-detail ${closing ? 'is-closing' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-label={recipe.title}
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <button className="close-button" type="button" aria-label="Close recipe" onClick={onClose}>
+        <button
+          className="close-button"
+          type="button"
+          aria-label="Close recipe"
+          onClick={handleClose}
+        >
           ×
         </button>
 
         <div className="detail-header-grid">
-          <div className="detail-cover">
+          <div className="detail-cover select-none">
             <img
               src={imageSrc}
               alt={recipe.title}
+              draggable={false}
               onError={(event) => {
                 const fallback = getFallbackRecipeImage(recipe.guid || recipe.id);
                 if (event.currentTarget.src !== fallback) {
@@ -180,7 +208,7 @@ function RecipeDetail({
               }}
             />
           </div>
-          <div>
+          <div className="detail-header-info">
             <div className="detail-meta-pills">
               <span className="cabagges-pill solid-green py-2 px-4 text-xs">
                 {creator?.displayName ?? 'Substack Recipe'}
@@ -201,7 +229,7 @@ function RecipeDetail({
                   type="button"
                   onClick={() => {
                     onSelectCategory(cat);
-                    onClose();
+                    handleClose();
                   }}
                   className="cabagges-pill py-2 px-4 text-xs cursor-pointer"
                 >
@@ -263,11 +291,30 @@ function Dashboard({ user, onSignOut }: { user: AuthUser; onSignOut: () => Promi
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [showAllGrid, setShowAllGrid] = useState(false);
+  const [activePage, setActivePage] = useState<'index' | 'all'>(() =>
+    window.location.pathname === '/recipes' ? 'all' : 'index',
+  );
   const [dispatchOpen, setDispatchOpen] = useState(true);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const onPopState = () => {
+      setActivePage(window.location.pathname === '/recipes' ? 'all' : 'index');
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  const navigateToPage = useCallback((page: 'index' | 'all') => {
+    const targetPath = page === 'all' ? '/recipes' : '/';
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState({}, '', targetPath);
+    }
+    setActivePage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   const loadData = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
@@ -307,6 +354,16 @@ function Dashboard({ user, onSignOut }: { user: AuthUser; onSignOut: () => Promi
       .sort((a, b) => b[1] - a[1])
       .slice(0, 8)
       .map(([name]) => name);
+  }, [recipes]);
+
+  const creatorRecipeCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const recipe of recipes) {
+      if (recipe.creatorId) {
+        counts.set(recipe.creatorId, (counts.get(recipe.creatorId) ?? 0) + 1);
+      }
+    }
+    return counts;
   }, [recipes]);
 
   const filteredRecipes = useMemo(() => {
@@ -377,10 +434,8 @@ function Dashboard({ user, onSignOut }: { user: AuthUser; onSignOut: () => Promi
   }, []);
 
   const handleSeeAll = useCallback(() => {
-    setSelectedCategory(null);
-    setSelectedCreatorId(null);
-    setShowAllGrid((prev) => !prev);
-  }, []);
+    navigateToPage('all');
+  }, [navigateToPage]);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -404,18 +459,29 @@ function Dashboard({ user, onSignOut }: { user: AuthUser; onSignOut: () => Promi
       {/* Sticky Minimal Topbar + Smooth Expandable Drawer */}
       <div className={`bite-header-wrap ${menuOpen ? 'drawer-open' : ''}`}>
         <header className="bite-topbar">
-          <button
-            type="button"
-            className={`menu-trigger ${menuOpen ? 'is-open' : ''}`}
-            onClick={() => setMenuOpen((prev) => !prev)}
-            aria-expanded={menuOpen}
-          >
-            <span className={`menu-icon-bars ${menuOpen ? 'is-open' : ''}`} aria-hidden="true">
-              <span />
-              <span />
-            </span>
-            <span>bite.world</span>
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              className={`menu-trigger ${menuOpen ? 'is-open' : ''}`}
+              onClick={() => setMenuOpen((prev) => !prev)}
+              aria-expanded={menuOpen}
+            >
+              <span className={`menu-icon-bars ${menuOpen ? 'is-open' : ''}`} aria-hidden="true">
+                <span />
+                <span />
+              </span>
+              <span>bite.world</span>
+            </button>
+            {activePage === 'all' && (
+              <button
+                type="button"
+                className="topbar-link"
+                onClick={() => navigateToPage('index')}
+              >
+                ← Latest Index
+              </button>
+            )}
+          </div>
 
           <div className="topbar-actions">
             <div className={`search-shell ${searchOpen || Boolean(search) ? 'is-open' : ''}`}>
@@ -450,6 +516,13 @@ function Dashboard({ user, onSignOut }: { user: AuthUser; onSignOut: () => Promi
             </div>
             <button
               type="button"
+              className={`topbar-link ${activePage === 'all' ? 'active' : ''}`}
+              onClick={() => navigateToPage(activePage === 'all' ? 'index' : 'all')}
+            >
+              All Recipes ({recipes.length})
+            </button>
+            <button
+              type="button"
               className={`topbar-link ${menuOpen ? 'active' : ''}`}
               onClick={() => setMenuOpen((prev) => !prev)}
             >
@@ -473,13 +546,14 @@ function Dashboard({ user, onSignOut }: { user: AuthUser; onSignOut: () => Promi
                 <div className="drawer-list">
                   <button
                     type="button"
-                    className={`drawer-item ${!selectedCategory ? 'active' : ''}`}
+                    className={`drawer-item ${activePage === 'index' && !selectedCategory ? 'active' : ''}`}
                     onClick={() => {
                       setSelectedCategory(null);
+                      navigateToPage('index');
                       setMenuOpen(false);
                     }}
                   >
-                    Popular
+                    Latest 10
                   </button>
                   {(allCategories.length ? allCategories.slice(0, 6) : ['Dinner', 'Lunch', 'Noodles', 'Quick']).map(
                     (cat) => (
@@ -498,9 +572,9 @@ function Dashboard({ user, onSignOut }: { user: AuthUser; onSignOut: () => Promi
                   )}
                   <button
                     type="button"
-                    className="drawer-item"
+                    className={`drawer-item ${activePage === 'all' ? 'active' : ''}`}
                     onClick={() => {
-                      setShowAllGrid(true);
+                      navigateToPage('all');
                       setMenuOpen(false);
                     }}
                   >
@@ -587,7 +661,7 @@ function Dashboard({ user, onSignOut }: { user: AuthUser; onSignOut: () => Promi
                 {recipes.slice(0, 2).map((item) => (
                   <div
                     key={item.id}
-                    className="drawer-feature-card"
+                    className="drawer-feature-card select-none"
                     onClick={() => {
                       setSelectedRecipe(item);
                       setMenuOpen(false);
@@ -597,6 +671,7 @@ function Dashboard({ user, onSignOut }: { user: AuthUser; onSignOut: () => Promi
                       <img
                         src={item.image}
                         alt={item.title}
+                        draggable={false}
                         loading="eager"
                         decoding="async"
                         onError={(event) => {
@@ -618,11 +693,6 @@ function Dashboard({ user, onSignOut }: { user: AuthUser; onSignOut: () => Promi
         </nav>
       </div>
 
-      {/* Hero Wordmark */}
-      <section className="hero-wordmark-section">
-        <BiteWordmark />
-      </section>
-
       {error && (
         <div className="error-banner" role="alert">
           <span>{error}</span>
@@ -630,120 +700,235 @@ function Dashboard({ user, onSignOut }: { user: AuthUser; onSignOut: () => Promi
         </div>
       )}
 
-      {/* Active Category / Publication Filter Pills */}
-      {(selectedCategory || selectedCreatorId || search) && (
-        <div className="filter-bar">
-          {selectedCategory && (
-            <button
-              type="button"
-              onClick={() => setSelectedCategory(null)}
-              className="cabagges-pill active-pill py-2 px-4 text-xs gap-1.5"
-            >
-              <span>Category: {selectedCategory}</span>
-              <span>×</span>
-            </button>
-          )}
-          {selectedCreatorId && (
-            <button
-              type="button"
-              onClick={() => setSelectedCreatorId(null)}
-              className="cabagges-pill active-pill py-2 px-4 text-xs gap-1.5"
-            >
-              <span>
-                Publication:{' '}
-                {creators.find((c) => c.creatorId === selectedCreatorId)?.displayName ?? 'Selected'}
-              </span>
-              <span>×</span>
-            </button>
-          )}
-          {search && (
-            <button
-              type="button"
-              onClick={() => setSearch('')}
-              className="cabagges-pill active-pill py-2 px-4 text-xs gap-1.5"
-            >
-              <span>Search: {search}</span>
-              <span>×</span>
-            </button>
-          )}
-        </div>
-      )}
+      {activePage === 'index' ? (
+        <main key="index-page" className="page-view-transition">
+          {/* Hero Wordmark */}
+          <section className="hero-wordmark-section">
+            <BiteWordmark />
+          </section>
 
-      {/* Recipe Index with Latest 10 Recipes */}
-      {loading ? (
-        <div className="empty-cookbook">
-          <span className="spinner" />
-          <h3>Setting the table...</h3>
-        </div>
-      ) : latestRecipes.length > 0 ? (
-        <RecipeCardRow
-          title={selectedCategory ? `${selectedCategory} Recipes` : 'Latest Recipes'}
-          recipes={latestRecipes}
-          onSelectRecipe={(recipe) => setSelectedRecipe(recipe)}
-          onSelectCategory={handleSelectCategory}
-          onSeeAll={handleSeeAll}
-        />
+          {/* Active Category / Publication Filter Pills */}
+          {(selectedCategory || selectedCreatorId || search) && (
+            <div className="filter-bar">
+              {selectedCategory && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategory(null)}
+                  className="cabagges-pill active-pill py-2 px-4 text-xs gap-1.5"
+                >
+                  <span>Category: {selectedCategory}</span>
+                  <span>×</span>
+                </button>
+              )}
+              {selectedCreatorId && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedCreatorId(null)}
+                  className="cabagges-pill active-pill py-2 px-4 text-xs gap-1.5"
+                >
+                  <span>
+                    Creator:{' '}
+                    {creators.find((c) => c.creatorId === selectedCreatorId)?.displayName ?? 'Selected'}
+                  </span>
+                  <span>×</span>
+                </button>
+              )}
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  className="cabagges-pill active-pill py-2 px-4 text-xs gap-1.5"
+                >
+                  <span>Search: {search}</span>
+                  <span>×</span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Recipe Index with Latest 10 Recipes */}
+          {loading ? (
+            <div className="empty-cookbook">
+              <span className="spinner" />
+              <h3>Setting the table...</h3>
+            </div>
+          ) : latestRecipes.length > 0 ? (
+            <RecipeCardRow
+              title={selectedCategory ? `${selectedCategory} Recipes` : 'Latest Recipes'}
+              recipes={latestRecipes}
+              onSelectRecipe={(recipe) => setSelectedRecipe(recipe)}
+              onSelectCategory={handleSelectCategory}
+              onSeeAll={handleSeeAll}
+            />
+          ) : (
+            <div className="empty-cookbook">
+              <h3>
+                {search || selectedCategory || selectedCreatorId
+                  ? 'No recipes match that filter.'
+                  : 'Your cookbook starts with a Substack publication.'}
+              </h3>
+              <p>
+                {search || selectedCategory || selectedCreatorId
+                  ? 'Clear your active filter or try another ingredient.'
+                  : 'Use the Bite Dispatch card or the footer below to add a public Substack URL (e.g. jadsaad.substack.com).'}
+              </p>
+            </div>
+          )}
+        </main>
       ) : (
-        <div className="empty-cookbook">
-          <h3>
-            {search || selectedCategory || selectedCreatorId
-              ? 'No recipes match that filter.'
-              : 'Your cookbook starts with a Substack publication.'}
-          </h3>
-          <p>
-            {search || selectedCategory || selectedCreatorId
-              ? 'Clear your active filter or try another ingredient.'
-              : 'Use the Bite Dispatch card or the footer below to add a public Substack URL (e.g. jadsaad.substack.com).'}
-          </p>
-        </div>
-      )}
+        <main key="all-recipes-page" className="all-recipes-page page-view-transition">
+          <div className="all-recipes-header">
+            <div className="all-recipes-title-row">
+              <div>
+                <button
+                  type="button"
+                  onClick={() => navigateToPage('index')}
+                  className="cabagges-pill py-2 px-4 text-xs font-medium gap-1.5 cursor-pointer"
+                >
+                  <span aria-hidden="true">←</span>
+                  <span>Back to Latest</span>
+                </button>
+                <h1 className="all-recipes-heading">
+                  All Recipes
+                  <span className="all-recipes-count">{filteredRecipes.length}</span>
+                </h1>
+              </div>
+            </div>
 
-      {/* Optional "See All" Full Grid */}
-      {showAllGrid && filteredRecipes.length > 0 && (
-        <section className="all-recipes-section">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-normal tracking-tight text-[#2E2E2E]">
-              All Recipes ({filteredRecipes.length})
-            </h2>
-            <button
-              type="button"
-              onClick={() => setShowAllGrid(false)}
-              className="cabagges-pill py-2 px-4 text-xs"
-            >
-              Collapse
-            </button>
-          </div>
-          <div className="all-recipes-grid">
-            {filteredRecipes.map((recipe) => (
-              <article
-                key={`grid-${recipe.id}`}
-                onClick={() => setSelectedRecipe(recipe)}
-                className="flex flex-col gap-y-3 group cursor-pointer"
-              >
-                <div className="recipe-card-photo-frame relative w-full aspect-[4/5] bg-[#EAF7EE] rounded-[20px] overflow-hidden">
-                  <img
-                    src={recipe.image || getRecipeImageFromGuid(recipe.guid, recipe.id)}
-                    alt={recipe.title}
-                    loading="eager"
-                    decoding="async"
-                    onError={(event) => {
-                      const fallback = getFallbackRecipeImage(recipe.guid || recipe.id);
-                      if (event.currentTarget.src !== fallback) {
-                        event.currentTarget.src = fallback;
+            {/* Creator Filter Bar */}
+            <div className="creator-filter-section" aria-label="Filter by creator">
+              <span className="creator-filter-label">Filter by Creator</span>
+              <div className="creator-filter-pills">
+                <button
+                  type="button"
+                  onClick={() => setSelectedCreatorId(null)}
+                  className={`cabagges-pill creator-pill cursor-pointer ${
+                    selectedCreatorId === null ? 'active-pill' : ''
+                  }`}
+                >
+                  <span>All Creators</span>
+                  <span className="creator-pill-count">{recipes.length}</span>
+                </button>
+                {creators.map((creator) => {
+                  const count = creatorRecipeCounts.get(creator.creatorId) ?? 0;
+                  const isActive = selectedCreatorId === creator.creatorId;
+                  return (
+                    <button
+                      key={creator.creatorId}
+                      type="button"
+                      onClick={() =>
+                        setSelectedCreatorId((prev) =>
+                          prev === creator.creatorId ? null : creator.creatorId,
+                        )
                       }
-                    }}
-                    className="recipe-card-photo w-full h-full object-cover"
-                  />
-                </div>
-                <div className="flex flex-col gap-y-1 text-sm pt-1">
-                  <h3 className="text-base font-normal tracking-tight text-[#2E2E2E] group-hover:text-[#00A859] transition-colors leading-tight">
-                    {recipe.title}
-                  </h3>
-                </div>
-              </article>
-            ))}
+                      className={`cabagges-pill creator-pill cursor-pointer ${
+                        isActive ? 'active-pill' : ''
+                      }`}
+                    >
+                      <span>{creator.displayName}</span>
+                      <span className="creator-pill-count">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {(selectedCategory || search) && (
+              <div className="all-recipes-subfilters">
+                {selectedCategory && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCategory(null)}
+                    className="cabagges-pill active-pill py-2 px-4 text-xs gap-1.5 cursor-pointer"
+                  >
+                    <span>Category: {selectedCategory}</span>
+                    <span>×</span>
+                  </button>
+                )}
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    className="cabagges-pill active-pill py-2 px-4 text-xs gap-1.5 cursor-pointer"
+                  >
+                    <span>Search: {search}</span>
+                    <span>×</span>
+                  </button>
+                )}
+              </div>
+            )}
           </div>
-        </section>
+
+          {loading ? (
+            <div className="empty-cookbook">
+              <span className="spinner" />
+              <h3>Loading all recipes...</h3>
+            </div>
+          ) : filteredRecipes.length > 0 ? (
+            <div className="all-recipes-grid">
+              {filteredRecipes.map((recipe) => {
+                const creator = creators.find((item) => item.creatorId === recipe.creatorId);
+                return (
+                  <article
+                    key={`grid-${recipe.id}`}
+                    onClick={() => setSelectedRecipe(recipe)}
+                    className="all-recipe-card flex flex-col gap-y-3 group select-none cursor-pointer"
+                  >
+                    <div className="recipe-card-photo-frame relative w-full aspect-[4/5] bg-[#EAF7EE] rounded-[20px] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] pointer-events-none">
+                      <img
+                        src={recipe.image || getRecipeImageFromGuid(recipe.guid, recipe.id)}
+                        alt={recipe.title}
+                        draggable={false}
+                        loading="eager"
+                        decoding="async"
+                        onError={(event) => {
+                          const fallback = getFallbackRecipeImage(recipe.guid || recipe.id);
+                          if (event.currentTarget.src !== fallback) {
+                            event.currentTarget.src = fallback;
+                          }
+                        }}
+                        className="recipe-card-photo w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-y-1 text-sm pt-1">
+                      <h3 className="text-base font-normal tracking-tight text-[#2E2E2E] group-hover:text-[#00A859] transition-colors leading-tight">
+                        {recipe.title}
+                      </h3>
+                      <div className="text-xs text-[#2E2E2E]/50 flex items-center gap-1.5 flex-wrap">
+                        {creator && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setSelectedCreatorId((prev) =>
+                                prev === creator.creatorId ? null : creator.creatorId,
+                              );
+                            }}
+                            className="hover:text-[#00A859] hover:underline transition-colors text-left font-medium"
+                          >
+                            {creator.displayName}
+                          </button>
+                        )}
+                        {creator && recipe.categories.length > 0 && <span>·</span>}
+                        {recipe.categories.slice(0, 2).map((category, idx) => (
+                          <span key={`${category}-${idx}`}>
+                            {category}
+                            {idx < Math.min(recipe.categories.length, 2) - 1 ? ', ' : ''}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="empty-cookbook">
+              <h3>No recipes found for this creator.</h3>
+              <p>Select All Creators above or check that your Substack publication has finished syncing.</p>
+            </div>
+          )}
+        </main>
       )}
 
       {/* Footer Pill Index & Substack Dispatch (Screenshot 1) */}
