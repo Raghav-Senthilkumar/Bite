@@ -521,7 +521,7 @@
 
 /* Smooth Page View Transition */
 .page-view-transition {
-  animation: pageReveal 440ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: pageReveal 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @keyframes pageReveal {
@@ -635,7 +635,7 @@
 }
 
 .all-recipe-card {
-  animation: pageReveal 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: pageReveal 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* Footer Directory (Screenshot 1) */
