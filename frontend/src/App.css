@@ -1037,6 +1037,14 @@
   transform: rotate(90deg);
 }
 
+.recipe-detail-drag-handle {
+  display: none;
+}
+
+.detail-mobile-tabs {
+  display: none;
+}
+
 .detail-columns {
   display: grid;
   grid-template-columns: 0.85fr 1.15fr;
@@ -1047,32 +1055,170 @@
   animation: detailItemReveal 460ms cubic-bezier(0.22, 1, 0.36, 1) 140ms both;
 }
 
+.detail-section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
 .detail-columns h3 {
   font-size: 16px;
   font-weight: 600;
-  margin-bottom: 16px;
   color: var(--ink);
+}
+
+.detail-section-hint {
+  font-size: 11.5px;
+  color: rgba(46, 46, 46, 0.45);
 }
 
 .ingredient-list,
 .instruction-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: grid;
-  gap: 10px;
-  padding-left: 18px;
+  gap: 8px;
   font-size: 14px;
-  line-height: 1.55;
+  line-height: 1.5;
 }
 
-.ingredient-list li strong {
+.ingredient-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 10px 12px;
+  border-radius: 13px;
+  background: #F9F9F6;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition:
+    background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease;
+}
+
+.ingredient-row:hover {
+  background: #F2F5ED;
+}
+
+.ingredient-row:active {
+  transform: scale(0.985);
+}
+
+.ingredient-check {
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  border-radius: 6px;
+  border: 1.5px solid rgba(46, 46, 46, 0.22);
+  background: #FFFFFF;
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition:
+    background-color 200ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    border-color 200ms ease,
+    transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.ingredient-row.is-checked {
+  opacity: 0.56;
+}
+
+.ingredient-row.is-checked .ingredient-check {
+  background: var(--green);
+  border-color: var(--green);
+  transform: scale(1.05);
+}
+
+.ingredient-row.is-checked .ingredient-text strong {
+  text-decoration: line-through;
+}
+
+.ingredient-text strong {
   display: block;
   color: var(--ink);
   font-weight: 500;
 }
 
-.ingredient-list li span {
+.ingredient-text span {
   display: block;
   font-size: 12px;
   color: var(--muted);
+}
+
+.instruction-list {
+  gap: 12px;
+}
+
+.instruction-step-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #F9F9F6;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition:
+    background-color 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 200ms ease;
+}
+
+.instruction-step-card:hover {
+  background: #F2F5ED;
+}
+
+.instruction-step-card:active {
+  transform: scale(0.99);
+}
+
+.step-number-pill {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--lime);
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+  transition:
+    background-color 220ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    color 220ms ease,
+    transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.instruction-step-card.is-done {
+  opacity: 0.58;
+}
+
+.instruction-step-card.is-done .step-number-pill {
+  background: var(--green);
+  color: #FFFFFF;
+}
+
+.instruction-step-card.is-done .step-body {
+  text-decoration: line-through;
+}
+
+.step-body {
+  font-size: 14.5px;
+  line-height: 1.58;
+  color: var(--ink);
 }
 
 /* Login Page in Cabagges Aesthetic */
@@ -1178,9 +1324,83 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .detail-header-grid,
+  .detail-header-grid {
+    grid-template-columns: 140px 1fr;
+    gap: 20px;
+    align-items: center;
+  }
+
+  /* Show sticky segmented Ingredients | Steps switcher on tablet & mobile */
+  .detail-mobile-tabs {
+    position: sticky;
+    top: -24px;
+    z-index: 5;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 4px;
+    margin: 22px 0 18px;
+    border-radius: 14px;
+    background: #F2F2EE;
+    box-shadow: 0 6px 18px rgba(255, 255, 255, 0.9);
+  }
+
+  .detail-tab-slider {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 4px;
+    width: calc(50% - 4px);
+    border-radius: 11px;
+    background: #FFFFFF;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+    transition: transform 360ms cubic-bezier(0.34, 1.4, 0.64, 1);
+  }
+
+  .detail-tab-btn {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 10px 12px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: rgba(46, 46, 46, 0.6);
+    transition: color 200ms ease;
+  }
+
+  .detail-tab-btn.is-active {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .detail-tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 19px;
+    padding: 0 6px;
+    border-radius: 999px;
+    font-size: 11px;
+    background: rgba(0, 168, 89, 0.12);
+    color: var(--green);
+  }
+
   .detail-columns {
     grid-template-columns: 1fr;
+    margin-top: 0;
+    padding-top: 4px;
+    border-top: none;
+  }
+
+  .detail-columns.active-tab-ingredients .detail-method-section {
+    display: none;
+  }
+
+  .detail-columns.active-tab-method .detail-ingredients-section {
+    display: none;
   }
 }
 
@@ -1341,34 +1561,70 @@
   }
 
   .dialog-backdrop {
-    padding: 10px;
+    padding: 0;
     align-items: end;
   }
 
   .recipe-detail {
+    width: 100%;
     max-height: 92dvh;
-    border-radius: 22px;
-    padding: 20px 18px 28px;
+    border-radius: 24px 24px 0 0;
+    padding: 12px 16px 32px;
+  }
+
+  .recipe-detail-drag-handle {
+    display: block;
+    width: 36px;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(46, 46, 46, 0.16);
+    margin: 2px auto 14px;
   }
 
   .detail-header-grid {
-    gap: 18px;
+    grid-template-columns: 84px 1fr;
+    gap: 14px;
+    align-items: start;
+    padding-right: 28px;
   }
 
   .detail-cover {
-    aspect-ratio: 16 / 10;
-    max-height: 220px;
-    border-radius: 16px;
+    width: 84px;
+    height: 98px;
+    aspect-ratio: auto;
+    border-radius: 14px;
+  }
+
+  .detail-meta-pills {
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .detail-meta-pills .cabagges-pill {
+    padding: 4px 9px;
+    font-size: 11px;
+    border-radius: 8px;
   }
 
   .recipe-detail h2 {
-    font-size: 24px;
-    margin-bottom: 10px;
+    font-size: 20px;
+    line-height: 1.15;
+    margin-bottom: 6px;
   }
 
   .detail-description {
-    font-size: 14px;
-    margin-bottom: 14px;
+    font-size: 13px;
+    line-height: 1.45;
+    margin-bottom: 10px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .detail-source-link {
+    padding: 6px 11px;
+    font-size: 11.5px;
   }
 
   .close-button {
@@ -1378,10 +1634,15 @@
     height: 32px;
   }
 
+  .detail-mobile-tabs {
+    top: -12px;
+    margin: 16px 0 14px;
+  }
+
   .detail-columns {
-    gap: 24px;
-    margin-top: 22px;
-    padding-top: 18px;
+    gap: 18px;
+    margin-top: 0;
+    padding-top: 2px;
   }
 
   .login-shell {
