@@ -64,8 +64,8 @@ export function DashboardHeader(props: DashboardHeaderProps) {
       />
 
       <div className={`bite-header-wrap ${menuOpen ? 'drawer-open' : ''}`}>
-        <header className="bite-topbar">
-          <div className="flex items-center gap-4">
+        <header className={`bite-topbar ${searchVisible ? 'search-is-active' : ''}`}>
+          <div className="topbar-left">
             <button
               type="button"
               className={`menu-trigger ${menuOpen ? 'is-open' : ''}`}
@@ -79,7 +79,11 @@ export function DashboardHeader(props: DashboardHeaderProps) {
               <span>bite.world</span>
             </button>
             {page === 'all' && (
-              <button type="button" className="topbar-link" onClick={() => onNavigate('index')}>
+              <button
+                type="button"
+                className="topbar-link hide-on-mobile"
+                onClick={() => onNavigate('index')}
+              >
                 ← Latest Index
               </button>
             )}
@@ -100,7 +104,7 @@ export function DashboardHeader(props: DashboardHeaderProps) {
                   ref={searchInputRef}
                   value={search}
                   onChange={(event) => onSearchChange(event.target.value)}
-                  placeholder="Search recipes, ingredients..."
+                  placeholder="Search recipes..."
                   tabIndex={searchVisible ? 0 : -1}
                 />
                 <button
@@ -118,19 +122,23 @@ export function DashboardHeader(props: DashboardHeaderProps) {
             </div>
             <button
               type="button"
-              className={`topbar-link ${page === 'all' ? 'active' : ''}`}
+              className={`topbar-link topbar-recipes-link ${page === 'all' ? 'active' : ''}`}
               onClick={() => onNavigate(page === 'all' ? 'index' : 'all')}
             >
-              All Recipes ({recipes.length})
+              {page === 'all' ? 'Latest' : `All (${recipes.length})`}
             </button>
             <button
               type="button"
-              className={`topbar-link ${menuOpen ? 'active' : ''}`}
+              className={`topbar-link hide-on-mobile ${menuOpen ? 'active' : ''}`}
               onClick={onToggleMenu}
             >
               Publications ({creators.length})
             </button>
-            <button type="button" className="topbar-link" onClick={() => void onSignOut()}>
+            <button
+              type="button"
+              className="topbar-link hide-on-mobile"
+              onClick={() => void onSignOut()}
+            >
               Sign out
             </button>
           </div>

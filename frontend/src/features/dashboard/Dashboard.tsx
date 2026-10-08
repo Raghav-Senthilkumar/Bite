@@ -44,7 +44,9 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [dispatchOpen, setDispatchOpen] = useState(true);
+  const [dispatchOpen, setDispatchOpen] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth > 640 : true,
+  );
   const [page, setPage] = useState<DashboardPage>(() =>
     window.location.pathname === '/recipes' ? 'all' : 'index',
   );

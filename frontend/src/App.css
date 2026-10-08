@@ -225,7 +225,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   font-size: 14px;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
 }
 
 .menu-trigger {
@@ -235,6 +243,7 @@
   font-size: 14px;
   font-weight: 500;
   color: var(--ink);
+  white-space: nowrap;
   transition: color 240ms cubic-bezier(0.22, 1, 0.36, 1),
     transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -277,11 +286,13 @@
   align-items: center;
   gap: 22px;
   font-size: 14px;
+  white-space: nowrap;
 }
 
 .topbar-link {
   color: var(--ink);
   font-size: 14px;
+  white-space: nowrap;
   transition: color 220ms cubic-bezier(0.22, 1, 0.36, 1),
     transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -722,7 +733,7 @@
   color: var(--green);
 }
 
-/* Floating Tilted Lime Card ("Bite Dispatch" - Screenshot 1, 2, 3, 4, 5) */
+/* Floating Tilted Lime Card ("Bite Dispatch") with Springy Expand & Close */
 .floating-dispatch-card {
   position: fixed;
   left: 26px;
@@ -732,21 +743,55 @@
   padding: 24px 22px 20px;
   background: var(--lime);
   border-radius: 20px;
-  transform: rotate(-2.5deg);
+  transform-origin: 24px calc(100% - 16px);
   box-shadow: 0 16px 38px rgba(0, 0, 0, 0.1);
-  transition: transform 200ms ease;
+  will-change: transform, opacity;
+  transition:
+    transform 520ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 320ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.floating-dispatch-card:hover {
-  transform: rotate(-1deg) translateY(-2px);
+.floating-dispatch-card.is-open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0) scale(1) rotate(-2.5deg);
+}
+
+.floating-dispatch-card.is-open:hover {
+  transform: translate3d(0, -3px, 0) scale(1.01) rotate(-1deg);
+}
+
+.floating-dispatch-card.is-closed {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate3d(-8px, 18px, 0) scale(0.32) rotate(-10deg);
+  transition:
+    transform 420ms cubic-bezier(0.34, 1.45, 0.64, 1),
+    opacity 200ms ease;
 }
 
 .floating-dispatch-close {
   position: absolute;
   top: 14px;
   right: 16px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
   font-size: 18px;
   color: rgba(46, 46, 46, 0.65);
+  transition:
+    transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.floating-dispatch-close:hover {
+  color: var(--ink);
+  background-color: rgba(255, 255, 255, 0.45);
+  transform: scale(1.12) rotate(90deg);
 }
 
 .floating-dispatch-card h3 {
@@ -770,7 +815,34 @@
   left: 24px;
   bottom: 24px;
   z-index: 35;
+  transform-origin: left bottom;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  will-change: transform, opacity;
+  transition:
+    transform 480ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 180ms ease;
+}
+
+.floating-dispatch-reopen.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.floating-dispatch-reopen.is-visible:hover {
+  transform: translate3d(0, -2px, 0) scale(1.05);
+}
+
+.floating-dispatch-reopen.is-Visible:active,
+.floating-dispatch-reopen.is-visible:active {
+  transform: translate3d(0, 0, 0) scale(0.94);
+}
+
+.floating-dispatch-reopen.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate3d(6px, -6px, 0) scale(0.55);
 }
 
 /* Empty State */
@@ -1085,21 +1157,27 @@
 
 @media (max-width: 960px) {
   .nav-drawer-inner {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+    padding: 16px 24px 32px;
+    max-height: calc(100dvh - 60px);
+    overflow-y: auto;
   }
-  .editorial-trio-grid {
-    grid-template-columns: 1fr;
+
+  .drawer-cards {
+    grid-column: 1 / -1;
   }
-  .guide-duo-section {
-    grid-template-columns: 1fr;
-    gap: 40px;
-  }
+
   .bite-footer {
     grid-template-columns: 1fr;
+    margin-top: 72px;
+    padding: 36px 24px 100px;
   }
+
   .footer-pill-columns {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
   .detail-header-grid,
   .detail-columns {
     grid-template-columns: 1fr;
@@ -1107,21 +1185,217 @@
 }
 
 @media (max-width: 640px) {
+  .hide-on-mobile {
+    display: none !important;
+  }
+
   .bite-topbar {
-    padding: 14px 16px;
+    padding: 13px 16px;
   }
-  .hero-wordmark-section,
-  .editorial-trio-section,
-  .guide-duo-section,
-  .all-recipes-section,
+
+  .topbar-actions {
+    gap: 14px;
+  }
+
+  .bite-topbar.search-is-active .topbar-recipes-link {
+    display: none;
+  }
+
+  .search-shell.is-open .search-inline {
+    max-width: min(210px, 58vw);
+    padding: 5px 12px;
+  }
+
+  .search-inline input {
+    width: 100%;
+    min-width: 105px;
+    font-size: 13px;
+  }
+
+  .bite-header-wrap.drawer-open {
+    border-bottom-left-radius: 22px;
+    border-bottom-right-radius: 22px;
+  }
+
+  .nav-drawer-inner {
+    padding: 14px 16px 24px;
+    gap: 20px 16px;
+    max-height: calc(100dvh - 54px);
+    overflow-y: auto;
+  }
+
+  .drawer-col h4 {
+    margin-bottom: 10px;
+  }
+
+  .drawer-list {
+    gap: 8px;
+  }
+
+  .drawer-item {
+    font-size: 18px;
+  }
+
+  .drawer-sub-section {
+    margin-top: 18px;
+  }
+
+  .drawer-cards {
+    gap: 12px;
+  }
+
+  .hero-wordmark-section {
+    padding: 12px 16px 20px;
+  }
+
+  .bite-wordmark-svg {
+    width: min(320px, 84vw);
+  }
+
+  .filter-bar {
+    padding: 0 16px;
+    margin-bottom: 12px;
+  }
+
+  .error-banner {
+    margin: 0 16px 16px;
+    padding: 10px 14px;
+  }
+
+  .all-recipes-page {
+    padding: 14px 16px 32px;
+  }
+
+  .all-recipes-header {
+    gap: 18px;
+    margin-bottom: 24px;
+  }
+
+  .all-recipes-heading {
+    margin-top: 12px;
+    font-size: 30px;
+  }
+
+  .creator-filter-pills {
+    gap: 8px;
+  }
+
+  .creator-pill {
+    padding: 7px 12px;
+    font-size: 12px;
+    border-radius: 10px;
+  }
+
+  .all-recipes-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 12px;
+  }
+
+  .empty-cookbook {
+    margin: 16px;
+    padding: 32px 20px;
+    border-radius: 20px;
+  }
+
+  .empty-cookbook h3 {
+    font-size: 18px;
+  }
+
   .bite-footer {
-    padding-left: 16px;
-    padding-right: 16px;
+    margin-top: 56px;
+    padding: 28px 16px 96px;
+    gap: 32px;
   }
+
+  .footer-pill-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px 12px;
+  }
+
+  .footer-pill {
+    padding: 7px 12px;
+    font-size: 12px;
+  }
+
   .floating-dispatch-card {
-    left: 14px;
-    right: 14px;
-    bottom: 14px;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
     width: auto;
+    padding: 18px 16px 16px;
+    border-radius: 18px;
+  }
+
+  .floating-dispatch-card.is-open,
+  .floating-dispatch-card.is-open:hover {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  .floating-dispatch-card.is-closed {
+    transform: translate3d(-8px, 18px, 0) scale(0.35);
+  }
+
+  .floating-dispatch-reopen {
+    left: 16px;
+    bottom: 16px;
+  }
+
+  .dialog-backdrop {
+    padding: 10px;
+    align-items: end;
+  }
+
+  .recipe-detail {
+    max-height: 92dvh;
+    border-radius: 22px;
+    padding: 20px 18px 28px;
+  }
+
+  .detail-header-grid {
+    gap: 18px;
+  }
+
+  .detail-cover {
+    aspect-ratio: 16 / 10;
+    max-height: 220px;
+    border-radius: 16px;
+  }
+
+  .recipe-detail h2 {
+    font-size: 24px;
+    margin-bottom: 10px;
+  }
+
+  .detail-description {
+    font-size: 14px;
+    margin-bottom: 14px;
+  }
+
+  .close-button {
+    top: 14px;
+    right: 14px;
+    width: 32px;
+    height: 32px;
+  }
+
+  .detail-columns {
+    gap: 24px;
+    margin-top: 22px;
+    padding-top: 18px;
+  }
+
+  .login-shell {
+    padding: 16px 16px 28px;
+  }
+
+  .login-card {
+    padding: 26px 20px;
+    transform: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .all-recipes-grid {
+    grid-template-columns: 1fr;
   }
 }
