@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef } from 'react';
-import { getFallbackRecipeImage, getRecipeImageFromGuid, type Recipe } from '../api';
+import type { Recipe } from '../api';
+import { RecipeImage } from './RecipeImage';
 
 export interface RecipeCardRowProps {
   title?: string;
@@ -30,30 +31,6 @@ export const RecipeCardRow: React.FC<RecipeCardRowProps> = ({
   const suppressClickRef = useRef(false);
   const frameRef = useRef<number | null>(null);
   const snapFrameRef = useRef<number | null>(null);
-
-  // Preload all recipe images and fallbacks into browser cache before scrolling into view.
-  useEffect(() => {
-    const preloaders: HTMLImageElement[] = [];
-    for (const recipe of recipes) {
-      const primarySrc = recipe.image || getRecipeImageFromGuid(recipe.guid, recipe.id);
-      const fallbackSrc = getFallbackRecipeImage(recipe.guid || recipe.id);
-
-      const img = new Image();
-      img.decoding = 'async';
-      img.src = primarySrc;
-      preloaders.push(img);
-
-      if (fallbackSrc && fallbackSrc !== primarySrc) {
-        const fallbackImg = new Image();
-        fallbackImg.decoding = 'async';
-        fallbackImg.src = fallbackSrc;
-        preloaders.push(fallbackImg);
-      }
-    }
-    return () => {
-      preloaders.length = 0;
-    };
-  }, [recipes]);
 
   // Keep the first card aligned with the heading, including on wide screens.
   useEffect(() => {
@@ -285,55 +262,45 @@ export const RecipeCardRow: React.FC<RecipeCardRowProps> = ({
         className="w-full overflow-x-auto no-scrollbar py-2 cursor-grab snap-x snap-proximity touch-pan-y overscroll-x-contain"
         style={{ '--row-inset': '16px', scrollPaddingLeft: 'var(--row-inset)', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
         
-        {/* Adjusted inline style: Removed paddingRight */}
         <div ref={trackRef} className="flex gap-4 md:gap-5 w-max will-change-transform"
           style={{ paddingLeft: 'var(--row-inset)' }}>
-          {recipes.map((recipe, index) => {
-            const imageSrc = recipe.image || getRecipeImageFromGuid(recipe.guid, recipe.id);
-            return (
-              <article key={recipe.id} data-recipe-card
-                onClick={() => onSelectRecipe(recipe)}
-                className="w-[260px] sm:w-[290px] md:w-[350px] lg:w-[380px] flex flex-col gap-y-3 group select-none flex-shrink-0 snap-start cursor-pointer">
-                <div className="recipe-card-photo-frame relative w-full aspect-[4/5] bg-[#EAF7EE] rounded-[20px] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] pointer-events-none">
-                  <img
-                    src={imageSrc}
-                    alt={recipe.title}
-                    draggable={false}
-                    loading="eager"
-                    decoding="async"
-                    fetchPriority={index < 5 ? 'high' : 'auto'}
-                    onError={(event) => {
-                      const fallback = getFallbackRecipeImage(recipe.guid || recipe.id);
-                      if (event.currentTarget.src !== fallback) {
-                        event.currentTarget.src = fallback;
-                      }
-                    }}
-                    className="recipe-card-photo w-full h-full object-cover"
-                  />
+          {recipes.map((recipe, index) => (
+            <article key={recipe.id} data-recipe-card
+              onClick={() => onSelectRecipe(recipe)}
+              className="w-[260px] sm:w-[290px] md:w-[350px] lg:w-[380px] flex flex-col gap-y-3 group select-none flex-shrink-0 snap-start cursor-pointer">
+              <div className="recipe-card-photo-frame relative w-full aspect-[4/5] bg-[#EAF7EE] rounded-[20px] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] pointer-events-none">
+                <RecipeImage
+                  recipe={recipe}
+                  draggable={false}
+                  loading={index === 0 ? 'eager' : 'lazy'}
+                  decoding="async"
+                  fetchPriority={index === 0 ? 'high' : 'auto'}
+                  maxDisplayWidth={420}
+                  className="recipe-card-photo w-full h-full object-cover"
+                />
+              </div>
+              <div className="flex flex-col gap-y-1 text-sm pt-1">
+                <h3 className="text-base font-normal tracking-tight text-[#2E2E2E] group-hover:text-[#00A859] transition-colors leading-tight">
+                  {recipe.title}
+                </h3>
+                <div className="text-xs text-[#2E2E2E]/50 flex items-center gap-1.5 flex-wrap">
+                  {recipe.categories.map((category, catIndex) => (
+                    <React.Fragment key={`${category}-${catIndex}`}>
+                      <button type="button" onClick={(event) => {
+                        event.stopPropagation();
+                        onSelectCategory(category);
+                      }} className="hover:text-[#00A859] hover:underline transition-colors text-left">
+                        {category}
+                      </button>
+                      {catIndex < recipe.categories.length - 1 && <span>,</span>}
+                    </React.Fragment>
+                  ))}
                 </div>
-                <div className="flex flex-col gap-y-1 text-sm pt-1">
-                  <h3 className="text-base font-normal tracking-tight text-[#2E2E2E] group-hover:text-[#00A859] transition-colors leading-tight">
-                    {recipe.title}
-                  </h3>
-                  <div className="text-xs text-[#2E2E2E]/50 flex items-center gap-1.5 flex-wrap">
-                    {recipe.categories.map((category, catIndex) => (
-                      <React.Fragment key={`${category}-${catIndex}`}>
-                        <button type="button" onClick={(event) => {
-                          event.stopPropagation();
-                          onSelectCategory(category);
-                        }} className="hover:text-[#00A859] hover:underline transition-colors text-left">
-                          {category}
-                        </button>
-                        {catIndex < recipe.categories.length - 1 && <span>,</span>}
-                      </React.Fragment>
-                    ))}
-                  </div>
-                </div>
-              </article>
-            );
-          })}
+              </div>
+            </article>
+          ))}
           
-          {/* THE LAYOUT FIX: Physical DOM node acting as the trailing boundary */}
+          {/* Keep enough trailing space for the final card to snap into view. */}
           <div className="flex-shrink-0 pointer-events-none" style={{ width: 'max(var(--row-inset), 35vw)' }} aria-hidden="true" />
         </div>
       </div>

@@ -78,7 +78,14 @@ export function RecipeDetail({
 
         <div className="detail-header-grid">
           <div className="detail-cover select-none">
-            <RecipeImage recipe={recipe} draggable={false} />
+            <RecipeImage
+              recipe={recipe}
+              draggable={false}
+              loading="eager"
+              decoding="async"
+              fetchPriority="high"
+              maxDisplayWidth={640}
+            />
           </div>
           <div className="detail-header-info">
             <div className="detail-meta-pills">

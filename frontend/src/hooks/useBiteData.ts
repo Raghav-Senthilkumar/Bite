@@ -1,11 +1,17 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { apiRequest, normalizeRecipe, type Creator, type Recipe } from '../api';
+import { getDataRefreshInterval } from '../network';
 
 type RawRecipe = Partial<Recipe> & Pick<Recipe, 'recipeId' | 'title'>;
 
 function errorMessage(caught: unknown, fallback: string) {
   return caught instanceof Error ? caught.message : fallback;
+}
+
+function sameRecipes(current: Recipe[], next: Recipe[]): boolean {
+  return current.length === next.length
+    && current.every((recipe, index) => JSON.stringify(recipe) === JSON.stringify(next[index]));
 }
 
 export function useBiteData() {
@@ -14,16 +20,24 @@ export function useBiteData() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const pendingImportsRef = useRef(false);
+  const lastRefreshRef = useRef(0);
 
   const loadData = useCallback(async (quiet = false) => {
+    lastRefreshRef.current = Date.now();
     if (!quiet) setLoading(true);
     try {
       const [creatorData, recipeData] = await Promise.all([
         apiRequest<{ creators: Creator[] }>('/api/creators'),
         apiRequest<{ recipes: RawRecipe[] }>('/api/recipes'),
       ]);
+      const nextRecipes = recipeData.recipes.map(normalizeRecipe);
+      pendingImportsRef.current = creatorData.creators.some((creator) =>
+        (creator.importCounts.QUEUED ?? 0) > 0
+        || (creator.importCounts.PROCESSING ?? 0) > 0,
+      );
       setCreators(creatorData.creators);
-      setRecipes(recipeData.recipes.map(normalizeRecipe));
+      setRecipes((current) => sameRecipes(current, nextRecipes) ? current : nextRecipes);
       setError('');
     } catch (caught) {
       setError(errorMessage(caught, 'Could not load Bite.'));
@@ -34,10 +48,24 @@ export function useBiteData() {
 
   useEffect(() => {
     const initialLoad = window.setTimeout(() => void loadData(), 0);
-    const interval = window.setInterval(() => void loadData(true), 15_000);
+    const refresh = (force = false) => {
+      const interval = pendingImportsRef.current ? 15_000 : getDataRefreshInterval();
+      if (document.visibilityState === 'visible' && navigator.onLine) {
+        if (force || Date.now() - lastRefreshRef.current >= interval) {
+          void loadData(true);
+        }
+      }
+    };
+    const interval = window.setInterval(() => refresh(), 15_000);
+    const onVisibilityChange = () => refresh(true);
+    const onOnline = () => refresh(true);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('online', onOnline);
     return () => {
       window.clearTimeout(initialLoad);
       window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('online', onOnline);
     };
   }, [loadData]);
 

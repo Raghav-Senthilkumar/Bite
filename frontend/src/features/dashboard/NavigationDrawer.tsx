@@ -183,8 +183,10 @@ export function NavigationDrawer({
                   <RecipeImage
                     recipe={recipe}
                     draggable={false}
-                    loading="eager"
+                    loading="lazy"
                     decoding="async"
+                    fetchPriority="low"
+                    maxDisplayWidth={420}
                   />
                 </div>
                 <span className="cabagges-pill py-2 px-4 text-xs" style={{ alignSelf: 'flex-start' }}>

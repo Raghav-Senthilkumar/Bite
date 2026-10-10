@@ -1,5 +1,8 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
 import type { Creator, Recipe } from '../../api';
 import { RecipeImage } from '../../components/RecipeImage';
+import { getNetworkProfile, getRecipeBatchSize } from '../../network';
 
 interface AllRecipesPageProps {
   creators: Creator[];
@@ -15,6 +18,121 @@ interface AllRecipesPageProps {
   onClearCategory: () => void;
   onSelectCreator: (creatorId: string | null) => void;
   onSelectRecipe: (recipe: Recipe) => void;
+}
+
+interface PaginatedRecipeGridProps {
+  creators: Creator[];
+  recipes: Recipe[];
+  selectedCreatorId: string | null;
+  onSelectCreator: (creatorId: string | null) => void;
+  onSelectRecipe: (recipe: Recipe) => void;
+}
+
+function PaginatedRecipeGrid({
+  creators,
+  recipes,
+  selectedCreatorId,
+  onSelectCreator,
+  onSelectRecipe,
+}: PaginatedRecipeGridProps) {
+  const batchSize = useMemo(() => getRecipeBatchSize(), []);
+  const profile = useMemo(() => getNetworkProfile(), []);
+  const [visibleCount, setVisibleCount] = useState(batchSize);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const creatorById = useMemo(
+    () => new Map(creators.map((creator) => [creator.creatorId, creator])),
+    [creators],
+  );
+  const visibleRecipes = recipes.slice(0, visibleCount);
+  const hasMore = visibleCount < recipes.length;
+  const loadNextBatch = useCallback(() => {
+    setVisibleCount((current) => Math.min(recipes.length, current + batchSize));
+  }, [batchSize, recipes.length]);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasMore || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) loadNextBatch();
+      },
+      { rootMargin: profile.preloadMargin },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loadNextBatch, profile.preloadMargin]);
+
+  return (
+    <>
+      <div className="all-recipes-grid">
+        {visibleRecipes.map((recipe, index) => {
+          const creator = creatorById.get(recipe.creatorId);
+          return (
+            <article
+              key={`grid-${recipe.id}`}
+              onClick={() => onSelectRecipe(recipe)}
+              className="all-recipe-card flex flex-col gap-y-3 group select-none cursor-pointer"
+            >
+              <div className="recipe-card-photo-frame relative w-full aspect-[4/5] bg-[#EAF7EE] rounded-[20px] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] pointer-events-none">
+                <RecipeImage
+                  recipe={recipe}
+                  draggable={false}
+                  loading={index === 0 ? 'eager' : 'lazy'}
+                  decoding="async"
+                  fetchPriority={index === 0 ? 'high' : 'auto'}
+                  maxDisplayWidth={520}
+                  className="recipe-card-photo w-full h-full object-cover"
+                />
+              </div>
+              <div className="flex flex-col gap-y-1 text-sm pt-1">
+                <h3 className="text-base font-normal tracking-tight text-[#2E2E2E] group-hover:text-[#00A859] transition-colors leading-tight">
+                  {recipe.title}
+                </h3>
+                <div className="text-xs text-[#2E2E2E]/50 flex items-center gap-1.5 flex-wrap">
+                  {creator && (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onSelectCreator(
+                          selectedCreatorId === creator.creatorId ? null : creator.creatorId,
+                        );
+                      }}
+                      className="hover:text-[#00A859] hover:underline transition-colors text-left font-medium"
+                    >
+                      {creator.displayName}
+                    </button>
+                  )}
+                  {creator && recipe.categories.length > 0 && <span>·</span>}
+                  {recipe.categories.slice(0, 2).map((category, categoryIndex) => (
+                    <span key={`${category}-${categoryIndex}`}>
+                      {category}
+                      {categoryIndex < Math.min(recipe.categories.length, 2) - 1 ? ', ' : ''}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      {hasMore && (
+        <div ref={sentinelRef} className="recipe-pagination" aria-live="polite">
+          <span>
+            Showing {visibleRecipes.length} of {recipes.length}
+          </span>
+          <button
+            type="button"
+            onClick={loadNextBatch}
+            className="cabagges-pill py-2.5 px-4 text-xs font-medium cursor-pointer"
+          >
+            Load more recipes
+          </button>
+        </div>
+      )}
+    </>
+  );
 }
 
 export function AllRecipesPage({
@@ -117,56 +235,14 @@ export function AllRecipesPage({
           <h3>Loading all recipes...</h3>
         </div>
       ) : recipes.length > 0 ? (
-        <div className="all-recipes-grid">
-          {recipes.map((recipe) => {
-            const creator = creators.find((item) => item.creatorId === recipe.creatorId);
-            return (
-              <article
-                key={`grid-${recipe.id}`}
-                onClick={() => onSelectRecipe(recipe)}
-                className="all-recipe-card flex flex-col gap-y-3 group select-none cursor-pointer"
-              >
-                <div className="recipe-card-photo-frame relative w-full aspect-[4/5] bg-[#EAF7EE] rounded-[20px] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] pointer-events-none">
-                  <RecipeImage
-                    recipe={recipe}
-                    draggable={false}
-                    loading="eager"
-                    decoding="async"
-                    className="recipe-card-photo w-full h-full object-cover"
-                  />
-                </div>
-                <div className="flex flex-col gap-y-1 text-sm pt-1">
-                  <h3 className="text-base font-normal tracking-tight text-[#2E2E2E] group-hover:text-[#00A859] transition-colors leading-tight">
-                    {recipe.title}
-                  </h3>
-                  <div className="text-xs text-[#2E2E2E]/50 flex items-center gap-1.5 flex-wrap">
-                    {creator && (
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          onSelectCreator(
-                            selectedCreatorId === creator.creatorId ? null : creator.creatorId,
-                          );
-                        }}
-                        className="hover:text-[#00A859] hover:underline transition-colors text-left font-medium"
-                      >
-                        {creator.displayName}
-                      </button>
-                    )}
-                    {creator && recipe.categories.length > 0 && <span>·</span>}
-                    {recipe.categories.slice(0, 2).map((category, index) => (
-                      <span key={`${category}-${index}`}>
-                        {category}
-                        {index < Math.min(recipe.categories.length, 2) - 1 ? ', ' : ''}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-        </div>
+        <PaginatedRecipeGrid
+          key={`${selectedCreatorId ?? 'all'}:${selectedCategory ?? ''}:${search}:${recipes.map((recipe) => recipe.id).join(',')}`}
+          creators={creators}
+          recipes={recipes}
+          selectedCreatorId={selectedCreatorId}
+          onSelectCreator={onSelectCreator}
+          onSelectRecipe={onSelectRecipe}
+        />
       ) : (
         <div className="empty-cookbook">
           <h3>No recipes found for this creator.</h3>
