@@ -11,11 +11,13 @@ from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from html.parser import HTMLParser
 from typing import ClassVar
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import quote, urljoin, urlparse, urlunparse
 
 USER_AGENT = "Bite/0.1 (+public recipe feed reader)"
 MAX_DOWNLOAD_BYTES = 2_000_000
 MAX_ARTICLE_CHARS = 60_000
+MAX_IMAGE_URL_CHARS = 2_048
+MEDIA_NAMESPACE = "http://search.yahoo.com/mrss/"
 
 
 class SubstackError(ValueError):
@@ -35,6 +37,7 @@ class FeedItem:
     url: str
     guid: str
     published_at: str
+    image_url: str | None = None
 
 
 class _TextExtractor(HTMLParser):
@@ -70,6 +73,146 @@ class _TextExtractor(HTMLParser):
     def handle_data(self, data: str) -> None:
         if not self.ignored_depth:
             self.parts.append(data)
+
+
+class _FirstImageExtractor(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.image_urls: list[str] = []
+
+    def handle_starttag(
+        self, tag: str, attrs: list[tuple[str, str | None]]
+    ) -> None:
+        if tag.lower() != "img":
+            return
+        values = {name.lower(): value for name, value in attrs if value}
+        for name in ("src", "data-src"):
+            if values.get(name):
+                self.image_urls.append(values[name])
+        if values.get("srcset"):
+            for source in values["srcset"].split(","):
+                parts = source.strip().split()
+                if parts:
+                    self.image_urls.append(parts[0])
+
+
+def _tag_parts(tag: str) -> tuple[str, str]:
+    if tag.startswith("{") and "}" in tag:
+        namespace, local_name = tag[1:].split("}", 1)
+        return namespace, local_name.lower()
+    return "", tag.lower()
+
+
+def _safe_image_url(value: str | None, *, base_url: str = "") -> str | None:
+    if not isinstance(value, str) or not value:
+        return None
+    candidate = html.unescape(value).strip()
+    if not candidate or len(candidate) > MAX_IMAGE_URL_CHARS:
+        return None
+    if any(ord(character) < 32 for character in candidate):
+        return None
+    if base_url:
+        candidate = urljoin(base_url, candidate)
+    try:
+        parsed = urlparse(candidate)
+        if (
+            parsed.scheme.lower() != "https"
+            or not parsed.hostname
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.port == 0
+        ):
+            return None
+    except ValueError:
+        return None
+    return urlunparse(
+        (
+            "https",
+            parsed.netloc,
+            parsed.path,
+            parsed.params,
+            parsed.query,
+            "",
+        )
+    )
+
+
+def _first_image_from_html(raw_html: str | None, *, base_url: str) -> str | None:
+    if not raw_html:
+        return None
+    parser = _FirstImageExtractor()
+    try:
+        parser.feed(html.unescape(raw_html))
+    except (TypeError, ValueError):
+        return None
+    for candidate in parser.image_urls:
+        image_url = _safe_image_url(candidate, base_url=base_url)
+        if image_url:
+            return image_url
+    return None
+
+
+def _image_from_feed_entry(entry: ET.Element, *, base_url: str) -> str | None:
+    descendants = list(entry.iter())
+
+    for element in descendants:
+        namespace, local_name = _tag_parts(element.tag)
+        if namespace != MEDIA_NAMESPACE or local_name != "content":
+            continue
+        media_type = (element.attrib.get("type") or "").lower()
+        medium = (element.attrib.get("medium") or "").lower()
+        if medium == "image" or media_type.startswith("image/"):
+            image_url = _safe_image_url(element.attrib.get("url"), base_url=base_url)
+            if image_url:
+                return image_url
+
+    for element in descendants:
+        _namespace, local_name = _tag_parts(element.tag)
+        is_enclosure = local_name == "enclosure" or (
+            local_name == "link"
+            and element.attrib.get("rel", "").lower() == "enclosure"
+        )
+        if not is_enclosure:
+            continue
+        media_type = (element.attrib.get("type") or "").lower()
+        if media_type.startswith("image/"):
+            image_url = _safe_image_url(
+                element.attrib.get("url") or element.attrib.get("href"),
+                base_url=base_url,
+            )
+            if image_url:
+                return image_url
+
+    for element in descendants:
+        namespace, local_name = _tag_parts(element.tag)
+        if namespace == MEDIA_NAMESPACE and local_name == "thumbnail":
+            image_url = _safe_image_url(element.attrib.get("url"), base_url=base_url)
+            if image_url:
+                return image_url
+
+    for element in descendants:
+        namespace, local_name = _tag_parts(element.tag)
+        if namespace == MEDIA_NAMESPACE or local_name not in {
+            "encoded",
+            "content",
+            "description",
+            "summary",
+        }:
+            continue
+        image_url = _first_image_from_html(element.text, base_url=base_url)
+        if image_url:
+            return image_url
+        for child in element.iter():
+            _child_namespace, child_name = _tag_parts(child.tag)
+            if child_name != "img":
+                continue
+            image_url = _safe_image_url(
+                child.attrib.get("src") or child.attrib.get("data-src"),
+                base_url=base_url,
+            )
+            if image_url:
+                return image_url
+    return None
 
 
 def clean_html(raw_html: str | None) -> str:
@@ -163,6 +306,7 @@ def parse_feed(data: bytes, publication: Publication) -> tuple[str, list[FeedIte
                     url=url,
                     guid=(item.findtext("guid") or url).strip(),
                     published_at=_iso_date(item.findtext("pubDate")),
+                    image_url=_image_from_feed_entry(item, base_url=url),
                 )
             )
         return display_name, items
@@ -173,7 +317,15 @@ def parse_feed(data: bytes, publication: Publication) -> tuple[str, list[FeedIte
     ).strip()
     items = []
     for entry in root.findall(f"{namespace}entry"):
-        link = entry.find(f"{namespace}link")
+        links = entry.findall(f"{namespace}link")
+        link = next(
+            (
+                candidate
+                for candidate in links
+                if candidate.attrib.get("rel", "alternate") == "alternate"
+            ),
+            links[0] if links else None,
+        )
         url = (link.attrib.get("href", "") if link is not None else "").strip()
         if not url:
             continue
@@ -186,6 +338,7 @@ def parse_feed(data: bytes, publication: Publication) -> tuple[str, list[FeedIte
                     entry.findtext(f"{namespace}published")
                     or entry.findtext(f"{namespace}updated")
                 ),
+                image_url=_image_from_feed_entry(entry, base_url=url),
             )
         )
     return display_name, items
@@ -193,6 +346,44 @@ def parse_feed(data: bytes, publication: Publication) -> tuple[str, list[FeedIte
 
 def fetch_feed(publication: Publication) -> tuple[str, list[FeedItem]]:
     return parse_feed(fetch_bytes(publication.feed_url), publication)
+
+
+def fetch_article_image_url(source_url: str) -> str | None:
+    try:
+        parsed = urlparse(source_url)
+        hostname = (parsed.hostname or "").lower().rstrip(".")
+        path_parts = [part for part in parsed.path.split("/") if part]
+        if (
+            parsed.scheme != "https"
+            or not hostname.endswith(".substack.com")
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.port not in (None, 443)
+            or len(path_parts) != 2
+            or path_parts[0] != "p"
+        ):
+            return None
+        slug = path_parts[1]
+        api_url = f"https://{hostname}/api/v1/posts/{quote(slug, safe='')}"
+        payload = json.loads(fetch_bytes(api_url))
+        if not isinstance(payload, dict):
+            return None
+        cover_image = _safe_image_url(payload.get("cover_image"), base_url=source_url)
+        if cover_image:
+            return cover_image
+        body = payload.get("body_html") or payload.get("html_body") or payload.get("body")
+        return _first_image_from_html(
+            body if isinstance(body, str) else None,
+            base_url=source_url,
+        )
+    except (
+        SubstackError,
+        json.JSONDecodeError,
+        UnicodeDecodeError,
+        TypeError,
+        ValueError,
+    ):
+        return None
 
 
 def fetch_article_text(source_url: str) -> str:

@@ -42,7 +42,11 @@ def test_discovery_is_idempotent() -> None:
         "feedUrl": "https://kitchen.substack.com/feed",
     }
     post = FeedItem(
-        "Pie", "https://kitchen.substack.com/p/pie", "post-1", "2024-01-01T00:00:00Z"
+        "Pie",
+        "https://kitchen.substack.com/p/pie",
+        "post-1",
+        "2024-01-01T00:00:00Z",
+        "https://cdn.example.com/pie.jpg",
     )
     loader = lambda _publication: ("Kitchen", [post])
 
@@ -56,3 +60,6 @@ def test_discovery_is_idempotent() -> None:
     assert first == 1
     assert second == 0
     assert len(queue.messages) == 1
+    assert next(iter(table.items.values()))["image"] == (
+        "https://cdn.example.com/pie.jpg"
+    )

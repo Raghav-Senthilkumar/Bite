@@ -47,6 +47,7 @@ def test_process_source_item_writes_recipe_and_completes() -> None:
             "sourceItemId": "source-1",
             "creatorId": "creator-1",
             "sourceUrl": "https://demo.substack.com/p/soup",
+            "image": "https://cdn.example.com/soup.jpg",
             "title": "Soup",
             "publishedAt": "2024-01-01T00:00:00Z",
             "status": "QUEUED",
@@ -64,6 +65,7 @@ def test_process_source_item_writes_recipe_and_completes() -> None:
 
     assert count == 1
     assert recipes.puts[0]["ingredients"][0]["quantity"] == Decimal("1.5")
+    assert recipes.puts[0]["image"] == "https://cdn.example.com/soup.jpg"
     assert source.updates[-1]["ExpressionAttributeValues"][":status"] == "COMPLETE"
 
 

@@ -63,6 +63,8 @@ def process_source_item(
                 "createdAt": now,
                 **recipe.model_dump(),
             }
+            if source.get("image"):
+                item["image"] = source["image"]
             try:
                 recipes.put_item(
                     Item=to_dynamo(item),

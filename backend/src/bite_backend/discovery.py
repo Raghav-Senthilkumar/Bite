@@ -42,6 +42,8 @@ def discover_creator(
             "attemptCount": 0,
             "discoveredAt": datetime.now(UTC).isoformat(),
         }
+        if post.image_url:
+            item["image"] = post.image_url
         try:
             source_items.put_item(
                 Item=item,

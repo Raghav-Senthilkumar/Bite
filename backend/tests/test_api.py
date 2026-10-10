@@ -81,3 +81,17 @@ def test_recipe_access_is_scoped_to_follow() -> None:
 
     with pytest.raises(PermissionError):
         api.get_recipe("user-1", "recipe-1")
+
+
+def test_resolves_legacy_recipe_image_with_injected_loader() -> None:
+    api = service(
+        image_loader=lambda source_url: (
+            "https://cdn.example.com/soup.jpg" if source_url.endswith("/p/soup") else None
+        )
+    )
+
+    assert api.resolve_recipe_image("https://demo.substack.com/p/soup") == {
+        "imageUrl": "https://cdn.example.com/soup.jpg"
+    }
+    with pytest.raises(KeyError):
+        api.resolve_recipe_image("https://demo.substack.com/p/missing")

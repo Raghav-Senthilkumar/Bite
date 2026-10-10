@@ -13,7 +13,13 @@ from botocore.exceptions import ClientError
 
 from .aws_utils import from_dynamo
 from .ids import creator_id
-from .substack import Publication, SubstackError, canonicalize_publication, fetch_feed
+from .substack import (
+    Publication,
+    SubstackError,
+    canonicalize_publication,
+    fetch_article_image_url,
+    fetch_feed,
+)
 
 
 def _now() -> datetime:
@@ -53,6 +59,7 @@ class ApiService:
         lambda_client: Any,
         discovery_function_name: str,
         feed_loader: Callable[[Publication], tuple[str, list[Any]]] = fetch_feed,
+        image_loader: Callable[[str], str | None] = fetch_article_image_url,
     ) -> None:
         self.users = users
         self.creators = creators
@@ -62,6 +69,7 @@ class ApiService:
         self.lambda_client = lambda_client
         self.discovery_function_name = discovery_function_name
         self.feed_loader = feed_loader
+        self.image_loader = image_loader
 
     def me(self, user_id: str, claims: dict[str, Any]) -> dict[str, Any]:
         now = _now().isoformat()
@@ -191,6 +199,12 @@ class ApiService:
             raise PermissionError("You cannot access this recipe.")
         return recipe
 
+    def resolve_recipe_image(self, source_url: str) -> dict[str, str]:
+        image_url = self.image_loader(source_url)
+        if not image_url:
+            raise KeyError("Recipe image not found.")
+        return {"imageUrl": image_url}
+
     def _invoke_discovery(self, identifier: str) -> None:
         self.lambda_client.invoke(
             FunctionName=self.discovery_function_name,
@@ -231,6 +245,12 @@ def handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
             )
         if path == "/api/recipes" and method == "GET":
             return _response(200, {"recipes": service.list_recipes(user_id)})
+        if path == "/api/recipe-image" and method == "GET":
+            query = event.get("queryStringParameters") or {}
+            return _response(
+                200,
+                service.resolve_recipe_image(str(query.get("url", ""))),
+            )
 
         creator_match = re_match(r"^/api/creators/([^/]+)(/check)?$", path)
         if creator_match and method == "DELETE" and not creator_match.group(2):
