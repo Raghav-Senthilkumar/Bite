@@ -286,6 +286,7 @@ export class InfrastructureStack extends cdk.Stack {
       ['/api/creators/{creatorId}', [apigwv2.HttpMethod.DELETE]],
       ['/api/creators/{creatorId}/check', [apigwv2.HttpMethod.POST]],
       ['/api/recipes', [apigwv2.HttpMethod.GET]],
+      ['/api/recipe-image', [apigwv2.HttpMethod.GET]],
       ['/api/recipes/{recipeId}', [apigwv2.HttpMethod.GET]],
     ];
     for (const [routePath, methods] of protectedRoutes) {
