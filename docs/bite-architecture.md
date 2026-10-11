@@ -14,7 +14,7 @@ By tomorrow, one user should be able to:
 8. Ask an AI cooking assistant about accessible recipes, missing ingredients, and substitutions.
 9. Leave the system running and verify that the daily job discovers new Substack posts.
 
-TikTok, transcription, pantry OCR, full-text search, and recipe images are explicitly outside this MVP.
+TikTok, transcription, pantry OCR, full-text search, and copying recipe image binaries into Bite-owned storage are explicitly outside this MVP. Public RSS cover-image URLs may be retained as source metadata.
 
 ## 2. Product rules
 
@@ -204,6 +204,7 @@ Key: `sourceItemId`
   "creatorId": "sha256:...",
   "sourceUrl": "https://...",
   "sourceGuid": "rss-guid-if-present",
+  "image": "https://... optional public RSS cover",
   "title": "Post title",
   "publishedAt": "ISO-8601",
   "status": "QUEUED | PROCESSING | COMPLETE | NO_RECIPE | FAILED",
@@ -228,6 +229,7 @@ Use a deterministic recipe ID based on `sourceItemId` plus the recipe position w
   "sourceItemId": "sha256:...",
   "creatorId": "sha256:...",
   "sourceUrl": "https://...",
+  "image": "https://... optional public RSS cover",
   "title": "Lemony Chicken",
   "description": "...",
   "ingredients": [
@@ -297,9 +299,10 @@ For every RSS item:
 
 1. Prefer RSS GUID; otherwise canonicalize the post URL.
 2. Derive deterministic `sourceItemId`.
-3. Create `SourceItems` with a conditional write.
-4. Only enqueue the item when the conditional write succeeds.
-5. Update `lastSuccessfulCheckAt` after the feed was successfully parsed and queued.
+3. Retain a safe public HTTPS cover-image URL when RSS/Atom exposes one.
+4. Create `SourceItems` with a conditional write.
+5. Only enqueue the item when the conditional write succeeds.
+6. Update `lastSuccessfulCheckAt` after the feed was successfully parsed and queued.
 
 Do not rely on `lastPostUrl`. This prevents missed posts, duplicates, and incorrect cursors after partial failure.
 
@@ -415,6 +418,7 @@ GET    /api/creators/{creatorId}/status
 GET    /api/recipes
 GET    /api/recipes/{recipeId}
 GET    /api/recipes/cook-now
+GET    /api/recipe-image?url=...  (legacy cover-URL resolution)
 
 GET    /api/pantry
 PUT    /api/pantry                { ingredients: [{ name, quantity, unit }] }
@@ -507,7 +511,7 @@ Success: the next run is observable even when no new post exists, and repeated d
 - pantry OCR
 - advanced full-text or semantic search
 - WebSocket/streamed notifications
-- recipe image ingestion
+- copying recipe image binaries into Bite-owned storage
 - sharing and social features
 - OpenSearch, Redis, ECS, and multi-region infrastructure
 
