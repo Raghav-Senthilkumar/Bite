@@ -48,10 +48,23 @@ export function DashboardHeader(props: DashboardHeaderProps) {
     onSignOut,
   } = props;
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const topbarRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (searchOpen) searchInputRef.current?.focus();
   }, [searchOpen]);
+
+  useEffect(() => {
+    const topbar = topbarRef.current;
+    if (!topbar) return;
+    const syncHeight = () => {
+      document.documentElement.style.setProperty('--bite-topbar-height', `${topbar.offsetHeight}px`);
+    };
+    syncHeight();
+    const observer = new ResizeObserver(syncHeight);
+    observer.observe(topbar);
+    return () => observer.disconnect();
+  }, []);
 
   const searchVisible = searchOpen || Boolean(search);
 
@@ -64,7 +77,7 @@ export function DashboardHeader(props: DashboardHeaderProps) {
       />
 
       <div className={`bite-header-wrap ${menuOpen ? 'drawer-open' : ''}`}>
-        <header className={`bite-topbar ${searchVisible ? 'search-is-active' : ''}`}>
+        <header ref={topbarRef} className={`bite-topbar ${searchVisible ? 'search-is-active' : ''}`}>
           <div className="topbar-left">
             <button
               type="button"
@@ -146,6 +159,7 @@ export function DashboardHeader(props: DashboardHeaderProps) {
 
         <NavigationDrawer {...props} open={menuOpen} onClose={onCloseMenu} />
       </div>
+      <div className="bite-header-spacer" aria-hidden="true" />
     </>
   );
 }

@@ -222,14 +222,21 @@
 }
 
 .bite-header-wrap {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 40;
+  padding-right: var(--scrollbar-gap, 0px);
   background: rgba(249, 249, 246, 0.9);
   backdrop-filter: blur(12px);
   transition: background-color 380ms cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 420ms cubic-bezier(0.22, 1, 0.36, 1),
     border-radius 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.bite-header-spacer {
+  height: var(--bite-topbar-height, 56px);
 }
 
 .bite-header-wrap.drawer-open {
@@ -407,6 +414,7 @@
 .nav-drawer-inner {
   max-width: 1720px;
   margin: 0 auto;
+  overscroll-behavior: contain;
   padding: 16px 32px 42px;
   border-top: 1px solid var(--line);
   display: grid;
@@ -963,6 +971,7 @@
   width: min(940px, 100%);
   max-height: 90vh;
   overflow-y: auto;
+  overscroll-behavior: contain;
   background: #FFFFFF;
   border-radius: 28px;
   padding: clamp(24px, 4vw, 48px);

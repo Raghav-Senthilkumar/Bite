@@ -10,7 +10,7 @@ export interface RecipeCardRowProps {
   onSeeAll: () => void;
 }
 
-const DRAG_SENSITIVITY = 0.45;
+const DRAG_SENSITIVITY = 1;
 
 export const RecipeCardRow: React.FC<RecipeCardRowProps> = ({
   title = 'Latest Recipes',
@@ -272,7 +272,7 @@ export const RecipeCardRow: React.FC<RecipeCardRowProps> = ({
                 <RecipeImage
                   recipe={recipe}
                   draggable={false}
-                  loading={index === 0 ? 'eager' : 'lazy'}
+                  loading="eager"
                   decoding="async"
                   fetchPriority={index === 0 ? 'high' : 'auto'}
                   maxDisplayWidth={420}

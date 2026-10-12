@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AuthUser } from 'aws-amplify/auth';
 
 import type { Recipe } from '../../api';
@@ -50,6 +50,7 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
   const [page, setPage] = useState<DashboardPage>(() =>
     window.location.pathname === '/recipes' ? 'all' : 'index',
   );
+  const lockedScrollY = useRef(0);
 
   useEffect(() => {
     const onPopState = () => {
@@ -59,12 +60,49 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
+  useEffect(() => {
+    const locked = menuOpen || selectedRecipe !== null;
+    if (!locked) return;
+
+    const body = document.body;
+    const scrollY = window.scrollY;
+    lockedScrollY.current = scrollY;
+    const scrollbarGap = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
+    const previous = {
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      right: body.style.right,
+      width: body.style.width,
+      paddingRight: body.style.paddingRight,
+    };
+    body.style.position = 'fixed';
+    body.style.top = `-${scrollY}px`;
+    body.style.left = '0';
+    body.style.right = '0';
+    body.style.width = '100%';
+    if (scrollbarGap > 0) body.style.paddingRight = `${scrollbarGap}px`;
+    document.documentElement.style.setProperty('--scrollbar-gap', `${scrollbarGap}px`);
+
+    return () => {
+      body.style.position = previous.position;
+      body.style.top = previous.top;
+      body.style.left = previous.left;
+      body.style.right = previous.right;
+      body.style.width = previous.width;
+      body.style.paddingRight = previous.paddingRight;
+      document.documentElement.style.removeProperty('--scrollbar-gap');
+      window.scrollTo({ top: lockedScrollY.current, left: 0, behavior: 'instant' });
+    };
+  }, [menuOpen, selectedRecipe]);
+
   const navigate = useCallback((nextPage: DashboardPage) => {
     const targetPath = nextPage === 'all' ? '/recipes' : '/';
     if (window.location.pathname !== targetPath) {
       window.history.pushState({}, '', targetPath);
     }
     setPage(nextPage);
+    lockedScrollY.current = 0;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
