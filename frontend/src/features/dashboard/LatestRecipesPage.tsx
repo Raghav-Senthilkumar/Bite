@@ -100,7 +100,7 @@ export function LatestRecipesPage({
           <p>
             {hasFilters
               ? 'Clear your active filter or try another ingredient.'
-              : 'Use the Bite Dispatch card or the footer below to add a public Substack URL (e.g. jadsaad.substack.com).'}
+              : 'Use Add New Creator or the footer below to add a public Substack URL (e.g. jadsaad.substack.com).'}
           </p>
         </div>
       )}

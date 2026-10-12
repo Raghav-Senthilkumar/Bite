@@ -137,7 +137,7 @@ export function NavigationDrawer({
                   onClose();
                 }}
               >
-                Add Substack
+                Add New Creator
               </button>
               <button
                 type="button"

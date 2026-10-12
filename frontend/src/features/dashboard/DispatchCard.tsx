@@ -35,12 +35,12 @@ export function DispatchCard({
           open ? 'is-hidden' : 'is-visible'
         }`}
       >
-        + Bite Dispatch
+        Add New Creator
       </button>
 
       <aside
         className={`floating-dispatch-card ${open ? 'is-open' : 'is-closed'}`}
-        aria-label="Add Substack publication"
+        aria-label="Add new creator"
         aria-hidden={!open}
       >
         <button
@@ -52,7 +52,7 @@ export function DispatchCard({
         >
           ×
         </button>
-        <h3>Bite Dispatch</h3>
+        <h3>Add New Creator</h3>
         <p>
           Paste a public Substack URL or handle to import new recipes, ingredients,
           and cooking steps into your shelf!

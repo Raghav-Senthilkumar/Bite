@@ -972,12 +972,30 @@
   max-height: 90vh;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(46, 46, 46, 0.28) transparent;
   background: #FFFFFF;
   border-radius: 28px;
   padding: clamp(24px, 4vw, 48px);
   box-shadow: 0 32px 80px rgba(0, 0, 0, 0.22);
   transform-origin: center bottom;
   animation: modalSpringIn 420ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.recipe-detail::-webkit-scrollbar {
+  width: 10px;
+}
+
+.recipe-detail::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 18px 0;
+}
+
+.recipe-detail::-webkit-scrollbar-thumb {
+  background-color: rgba(46, 46, 46, 0.28);
+  border: 3px solid #FFFFFF;
+  border-radius: 999px;
+  background-clip: padding-box;
 }
 
 .recipe-detail.is-closing {

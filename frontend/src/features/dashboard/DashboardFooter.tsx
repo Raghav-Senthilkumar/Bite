@@ -144,7 +144,7 @@ export function DashboardFooter({
       </div>
 
       <div className="footer-dispatch-col">
-        <h4>Bite Dispatch</h4>
+        <h4>Add New Creator</h4>
         <p>
           Follow a public Substack publication by URL or handle. Bite checks the
           latest 20 posts and extracts structured recipes automatically.
