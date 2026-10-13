@@ -200,6 +200,13 @@
   animation: spin 0.8s linear infinite;
 }
 
+.spinner-sm {
+  width: 14px;
+  height: 14px;
+  border-width: 2px;
+  flex-shrink: 0;
+}
+
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
@@ -233,6 +240,18 @@
   transition: background-color 380ms cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 420ms cubic-bezier(0.22, 1, 0.36, 1),
     border-radius 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.bite-header-wrap.is-spring {
+  animation: headerSpring 720ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes headerSpring {
+  0% { transform: translate3d(0, 0, 0); }
+  32% { transform: translate3d(0, 8px, 0); }
+  58% { transform: translate3d(0, -3px, 0); }
+  78% { transform: translate3d(0, 1px, 0); }
+  100% { transform: translate3d(0, 0, 0); }
 }
 
 .bite-header-spacer {
@@ -557,6 +576,162 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.import-status {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.import-banner-anchor {
+  display: grid;
+  grid-template-rows: 1fr;
+  scroll-margin-top: calc(var(--bite-topbar-height, 72px) + 8px);
+  transition: grid-template-rows 520ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.import-banner-anchor > .import-status {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.import-banner-anchor.is-leaving {
+  grid-template-rows: 0fr;
+  pointer-events: none;
+}
+
+.import-banner-anchor .import-status.is-banner {
+  transition:
+    margin 520ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 240ms ease,
+    transform 520ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.import-banner-anchor.is-leaving .import-status.is-banner {
+  margin-top: 0;
+  margin-bottom: 0;
+  opacity: 0;
+  transform: translateY(-8px) scale(0.985);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bite-header-wrap.is-spring,
+  .import-banner-anchor,
+  .import-banner-anchor.is-leaving .import-status.is-banner {
+    animation: none;
+    transition: none;
+  }
+}
+
+.import-status.is-banner {
+  max-width: 1656px;
+  margin: 8px auto 20px;
+  padding: 16px 18px 14px;
+  border-radius: 16px;
+  background: #FFFFFF;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.import-status.is-banner.is-complete {
+  background: #F3F8EC;
+}
+
+.import-status.is-banner.is-failed {
+  background: #FDECE7;
+  color: #9A3412;
+}
+
+.import-status.is-inline {
+  margin: 0 0 14px;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  gap: 6px;
+}
+
+.import-status-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.import-status-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.import-status.is-card .import-status-header {
+  justify-content: center;
+}
+
+.import-status.is-card .import-status-title,
+.import-status.is-card .import-status-detail {
+  width: 100%;
+  justify-content: center;
+  text-align: center;
+}
+
+.import-status-detail {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: rgba(46, 46, 46, 0.62);
+}
+
+.import-status.is-failed .import-status-detail {
+  color: #9A3412;
+}
+
+.import-status-dismiss {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: 18px;
+  line-height: 1;
+  color: rgba(46, 46, 46, 0.55);
+}
+
+.import-status-dismiss:hover {
+  color: var(--ink);
+  background: rgba(46, 46, 46, 0.06);
+}
+
+.import-progress-track {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(0, 168, 89, 0.14);
+  overflow: hidden;
+}
+
+.import-status.is-card .import-progress-track {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.import-progress-fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: var(--green);
+  transition: width 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.import-progress-fill.is-indeterminate {
+  width: 35%;
+  animation: importSlide 1.15s ease-in-out infinite;
+}
+
+@keyframes importSlide {
+  0% { transform: translateX(-130%); }
+  100% { transform: translateX(340%); }
 }
 
 /* Smooth Page View Transition */
@@ -1548,6 +1723,11 @@
   .error-banner {
     margin: 0 16px 16px;
     padding: 10px 14px;
+  }
+
+  .import-status.is-banner {
+    margin: 8px 16px 16px;
+    padding: 14px 14px 12px;
   }
 
   .all-recipes-page {

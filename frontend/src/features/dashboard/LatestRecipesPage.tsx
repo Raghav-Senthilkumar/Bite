@@ -1,6 +1,7 @@
 import type { Creator, Recipe } from '../../api';
 import { BiteWordmark } from '../../components/BiteWordmark';
 import { RecipeCardRow } from '../../components/RecipeCardRow';
+import type { ImportProgress } from './importProgress';
 
 interface LatestRecipesPageProps {
   creators: Creator[];
@@ -15,6 +16,7 @@ interface LatestRecipesPageProps {
   onSelectCategory: (category: string) => void;
   onSelectRecipe: (recipe: Recipe) => void;
   onSeeAll: () => void;
+  importProgress: ImportProgress | null;
 }
 
 export function LatestRecipesPage({
@@ -30,6 +32,7 @@ export function LatestRecipesPage({
   onSelectCategory,
   onSelectRecipe,
   onSeeAll,
+  importProgress,
 }: LatestRecipesPageProps) {
   const hasFilters = Boolean(search || selectedCategory || selectedCreatorId);
 
@@ -93,14 +96,18 @@ export function LatestRecipesPage({
       ) : (
         <div className="empty-cookbook">
           <h3>
-            {hasFilters
-              ? 'No recipes match that filter.'
-              : 'Your cookbook starts with a Substack publication.'}
+            {importProgress && importProgress.phase !== 'complete' && importProgress.phase !== 'failed'
+              ? importProgress.title
+              : hasFilters
+                ? 'No recipes match that filter.'
+                : 'Your cookbook starts with a Substack publication.'}
           </h3>
           <p>
-            {hasFilters
-              ? 'Clear your active filter or try another ingredient.'
-              : 'Use Add New Creator or the footer below to add a public Substack URL (e.g. jadsaad.substack.com).'}
+            {importProgress && importProgress.phase !== 'complete' && importProgress.phase !== 'failed'
+              ? 'Recipes will show up here as Bite finishes checking posts.'
+              : hasFilters
+                ? 'Clear your active filter or try another ingredient.'
+                : 'Use Add New Creator or the footer below to add a public Substack URL (e.g. jadsaad.substack.com).'}
           </p>
         </div>
       )}

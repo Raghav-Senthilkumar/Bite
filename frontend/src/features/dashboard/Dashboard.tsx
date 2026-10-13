@@ -6,6 +6,7 @@ import { RecipeDetail } from '../../components/RecipeDetail';
 import { useBiteData } from '../../hooks/useBiteData';
 import { useRecipeFilters } from '../../hooks/useRecipeFilters';
 import { AllRecipesPage } from './AllRecipesPage';
+import { CreatorImportStatus } from './CreatorImportStatus';
 import { DashboardFooter } from './DashboardFooter';
 import { DashboardHeader } from './DashboardHeader';
 import { DispatchCard } from './DispatchCard';
@@ -24,7 +25,9 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
     loading,
     submitting,
     error,
+    importProgress,
     clearError,
+    dismissImport,
     loadData,
     addCreator,
     checkCreator,
@@ -49,6 +52,14 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
     window.location.pathname === '/recipes' ? 'all' : 'index',
   );
   const lockedScrollY = useRef(0);
+  const importBannerRef = useRef<HTMLDivElement>(null);
+  const [headerSpring, setHeaderSpring] = useState(false);
+  const [leavingImport, setLeavingImport] = useState(false);
+
+  useEffect(() => {
+    if (importProgress?.phase !== 'connecting') return;
+    importBannerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [importProgress?.phase]);
 
   useEffect(() => {
     const onPopState = () => {
@@ -128,6 +139,22 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
     return counts;
   }, [recipes]);
 
+  function handleDismissImport() {
+    if (leavingImport) return;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) {
+      dismissImport();
+      return;
+    }
+    setLeavingImport(true);
+    setHeaderSpring(true);
+    window.setTimeout(() => {
+      dismissImport();
+      setLeavingImport(false);
+    }, 520);
+    window.setTimeout(() => setHeaderSpring(false), 760);
+  }
+
   async function handleAddCreator() {
     if (await addCreator(publication)) setPublication('');
   }
@@ -169,12 +196,22 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
         onRefresh={() => void loadData()}
         onSelectRecipe={setSelectedRecipe}
         onSignOut={onSignOut}
+        spring={headerSpring}
       />
 
       {error && (
         <div className="error-banner" role="alert">
           <span>{error}</span>
           <button type="button" onClick={clearError}>×</button>
+        </div>
+      )}
+
+      {importProgress && (
+        <div
+          ref={importBannerRef}
+          className={`import-banner-anchor ${leavingImport ? 'is-leaving' : ''}`}
+        >
+          <CreatorImportStatus progress={importProgress} onDismiss={handleDismissImport} />
         </div>
       )}
 
@@ -192,6 +229,7 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
           onSelectCategory={selectCategory}
           onSelectRecipe={setSelectedRecipe}
           onSeeAll={() => navigate('all')}
+          importProgress={importProgress}
         />
       ) : (
         <AllRecipesPage
@@ -218,6 +256,7 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
         selectedCreatorId={selectedCreatorId}
         publication={publication}
         submitting={submitting}
+        importProgress={importProgress}
         onResetFilters={() => {
           setSelectedCategory(null);
           setSelectedCreatorId(null);
@@ -236,6 +275,7 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
         open={dispatchOpen}
         publication={publication}
         submitting={submitting}
+        importProgress={importProgress}
         onOpen={() => setDispatchOpen(true)}
         onClose={() => setDispatchOpen(false)}
         onPublicationChange={setPublication}

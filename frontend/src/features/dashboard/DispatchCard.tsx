@@ -1,9 +1,13 @@
 import type { FormEvent } from 'react';
 
+import { CreatorImportStatus } from './CreatorImportStatus';
+import type { ImportProgress } from './importProgress';
+
 interface DispatchCardProps {
   open: boolean;
   publication: string;
   submitting: boolean;
+  importProgress: ImportProgress | null;
   onOpen: () => void;
   onClose: () => void;
   onPublicationChange: (publication: string) => void;
@@ -14,6 +18,7 @@ export function DispatchCard({
   open,
   publication,
   submitting,
+  importProgress,
   onOpen,
   onClose,
   onPublicationChange,
@@ -35,7 +40,9 @@ export function DispatchCard({
           open ? 'is-hidden' : 'is-visible'
         }`}
       >
-        Add New Creator
+        {importProgress && importProgress.phase !== 'complete' && importProgress.phase !== 'failed'
+          ? importProgress.phase === 'connecting' ? 'Connecting...' : 'Importing...'
+          : 'Add New Creator'}
       </button>
 
       <aside
@@ -53,20 +60,25 @@ export function DispatchCard({
           ×
         </button>
         <h3>Add New Creator</h3>
-        <p>
-          Paste a public Substack URL or handle to import new recipes, ingredients,
-          and cooking steps into your shelf!
-        </p>
+        {importProgress ? (
+          <CreatorImportStatus progress={importProgress} variant="card" />
+        ) : (
+          <p>
+            Paste a public Substack URL or handle to import new recipes, ingredients,
+            and cooking steps into your shelf!
+          </p>
+        )}
         <form className="dispatch-input-bar" onSubmit={handleSubmit}>
           <input
             aria-label="Substack URL or handle"
             value={publication}
             tabIndex={open ? 0 : -1}
+            disabled={submitting}
             onChange={(event) => onPublicationChange(event.target.value)}
             placeholder="Substack handle or URL"
           />
           <button type="submit" disabled={submitting} tabIndex={open ? 0 : -1}>
-            {submitting ? '...' : 'Add'}
+            {submitting ? 'Adding' : 'Add'}
           </button>
         </form>
       </aside>

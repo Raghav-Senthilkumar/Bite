@@ -1,6 +1,8 @@
 import type { FormEvent } from 'react';
 
 import type { Creator } from '../../api';
+import { CreatorImportStatus } from './CreatorImportStatus';
+import { countImports, type ImportProgress } from './importProgress';
 
 interface DashboardFooterProps {
   creators: Creator[];
@@ -9,6 +11,7 @@ interface DashboardFooterProps {
   selectedCreatorId: string | null;
   publication: string;
   submitting: boolean;
+  importProgress: ImportProgress | null;
   onResetFilters: () => void;
   onSelectCategory: (category: string) => void;
   onSelectCreator: (creatorId: string | null) => void;
@@ -23,12 +26,11 @@ interface DashboardFooterProps {
 const FALLBACK_CATEGORIES = ['Popular', 'Dinner', 'Lunch', 'Noodles'];
 
 function statusSummary(creator: Creator): string {
-  const counts = creator.importCounts ?? {};
-  const working = (counts.QUEUED ?? 0) + (counts.PROCESSING ?? 0);
-  if (working) return `${working} processing`;
-  if (counts.FAILED) return `${counts.FAILED} need attention`;
-  const complete = (counts.COMPLETE ?? 0) + (counts.NO_RECIPE ?? 0);
-  return complete ? `${complete} posts checked` : 'Ready to import';
+  const { working, settled, failed, total } = countImports(creator);
+  if (!creator.lastSuccessfulCheckAt && total === 0) return 'Checking posts';
+  if (working) return `${settled} of ${total} checked`;
+  if (failed) return `${failed} need attention`;
+  return settled ? `${settled} posts checked` : 'Ready to import';
 }
 
 export function DashboardFooter({
@@ -38,6 +40,7 @@ export function DashboardFooter({
   selectedCreatorId,
   publication,
   submitting,
+  importProgress,
   onResetFilters,
   onSelectCategory,
   onSelectCreator,
@@ -145,14 +148,19 @@ export function DashboardFooter({
 
       <div className="footer-dispatch-col">
         <h4>Add New Creator</h4>
-        <p>
-          Follow a public Substack publication by URL or handle. Bite checks the
-          latest 20 posts and extracts structured recipes automatically.
-        </p>
+        {importProgress ? (
+          <CreatorImportStatus progress={importProgress} variant="inline" />
+        ) : (
+          <p>
+            Follow a public Substack publication by URL or handle. Bite checks the
+            latest 20 posts and extracts structured recipes automatically.
+          </p>
+        )}
         <form className="dispatch-input-bar" onSubmit={handleSubmit}>
           <input
             aria-label="Substack publication"
             value={publication}
+            disabled={submitting}
             onChange={(event) => onPublicationChange(event.target.value)}
             placeholder="e.g. jadsaad.substack.com"
           />

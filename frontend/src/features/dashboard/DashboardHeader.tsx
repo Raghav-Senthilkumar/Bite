@@ -29,6 +29,7 @@ interface DashboardHeaderProps {
   onRefresh: () => void;
   onSelectRecipe: (recipe: Recipe) => void;
   onSignOut: () => Promise<void>;
+  spring: boolean;
 }
 
 export function DashboardHeader(props: DashboardHeaderProps) {
@@ -46,6 +47,7 @@ export function DashboardHeader(props: DashboardHeaderProps) {
     onSearchChange,
     onNavigate,
     onSignOut,
+    spring,
   } = props;
   const searchInputRef = useRef<HTMLInputElement>(null);
   const topbarRef = useRef<HTMLElement>(null);
@@ -76,7 +78,7 @@ export function DashboardHeader(props: DashboardHeaderProps) {
         onClick={onCloseMenu}
       />
 
-      <div className={`bite-header-wrap ${menuOpen ? 'drawer-open' : ''}`}>
+      <div className={`bite-header-wrap ${menuOpen ? 'drawer-open' : ''} ${spring ? 'is-spring' : ''}`}>
         <header ref={topbarRef} className={`bite-topbar ${searchVisible ? 'search-is-active' : ''}`}>
           <div className="topbar-left">
             <button
