@@ -13,6 +13,7 @@ Bite turns public Substack cooking posts into a private, searchable recipe shelf
 - Daily EventBridge Scheduler check at 6:00 AM `America/New_York`
 - Responsive recipe list, search, import status, manual check, and recipe details
 - Viewport-batched recipe cards with responsive, progressively loaded RSS cover images
+- To:Do add tiktok recipe functionality. Allow users to submit tiktok links to get recipes
 
 ## Verify locally
 
