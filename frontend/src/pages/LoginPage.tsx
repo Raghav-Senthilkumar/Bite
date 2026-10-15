@@ -1,8 +1,12 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 
 import { authConfigured } from '../auth';
 import { BiteWordmark } from '../components/BiteWordmark';
 import { GoogleMark } from '../components/GoogleMark';
+
+const InteractiveAvatar = lazy(() => import('../components/InteractiveAvatar').then(
+  (module) => ({ default: module.InteractiveAvatar }),
+));
 
 interface LoginPageProps {
   onSignIn: () => Promise<void>;
@@ -53,6 +57,10 @@ export function LoginPage({ onSignIn }: LoginPageProps) {
         <span className="cabagges-pill footer-pill">Updated Daily</span>
         <span className="cabagges-pill footer-pill">Original Post Linked</span>
       </div>
+
+      <Suspense fallback={null}>
+        <InteractiveAvatar />
+      </Suspense>
     </main>
   );
 }

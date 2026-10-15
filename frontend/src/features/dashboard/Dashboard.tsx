@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import type { AuthUser } from 'aws-amplify/auth';
 
 import type { Recipe } from '../../api';
@@ -11,6 +11,10 @@ import { DashboardHeader } from './DashboardHeader';
 import { DispatchCard } from './DispatchCard';
 import { LatestRecipesPage } from './LatestRecipesPage';
 import type { DashboardPage } from './types';
+
+const InteractiveAvatar = lazy(() => import('../../components/InteractiveAvatar').then(
+  (module) => ({ default: module.InteractiveAvatar }),
+));
 
 interface DashboardProps {
   user: AuthUser;
@@ -205,6 +209,13 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
         onPublicationChange={setPublication}
         onSubmit={() => void handleAddCreator()}
       />
+
+      <Suspense fallback={null}>
+        <InteractiveAvatar
+          quiet={menuOpen || Boolean(selectedRecipe)}
+          dispatchOpen={dispatchOpen}
+        />
+      </Suspense>
 
       {selectedRecipe && (
         <RecipeDetail
