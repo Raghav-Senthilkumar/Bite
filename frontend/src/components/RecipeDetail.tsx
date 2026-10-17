@@ -21,23 +21,36 @@ export function RecipeDetail({
   const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(() => new Set());
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(() => new Set());
   const closeTimerRef = useRef<number | null>(null);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   const handleClose = useCallback(() => {
     if (closeTimerRef.current !== null) return;
     setClosing(true);
-    closeTimerRef.current = window.setTimeout(onClose, 250);
-  }, [onClose]);
+    closeTimerRef.current = window.setTimeout(() => {
+      closeTimerRef.current = null;
+      onCloseRef.current();
+    }, 240);
+  }, []);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') handleClose();
     };
     window.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.removeEventListener('keydown', onKeyDown);
-      if (closeTimerRef.current !== null) window.clearTimeout(closeTimerRef.current);
-    };
+    return () => window.removeEventListener('keydown', onKeyDown);
   }, [handleClose]);
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current !== null) {
+        window.clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const toggleIngredient = (index: number) => {
     setCheckedIngredients((prev) => {
@@ -106,7 +119,8 @@ export function RecipeDetail({
                 <button
                   key={category}
                   type="button"
-                  onClick={() => {
+                  onClick={(event) => {
+                    event.stopPropagation();
                     onSelectCategory(category);
                     handleClose();
                   }}

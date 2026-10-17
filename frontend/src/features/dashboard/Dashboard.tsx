@@ -165,6 +165,10 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
     }
   }
 
+  const handleCloseRecipe = useCallback(() => {
+    setSelectedRecipe(null);
+  }, []);
+
   const latestRecipes = useMemo(
     () => filteredRecipes.slice(0, 10),
     [filteredRecipes],
@@ -286,7 +290,7 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
         <RecipeDetail
           recipe={selectedRecipe}
           creator={creators.find((creator) => creator.creatorId === selectedRecipe.creatorId)}
-          onClose={() => setSelectedRecipe(null)}
+          onClose={handleCloseRecipe}
           onSelectCategory={selectCategory}
         />
       )}
