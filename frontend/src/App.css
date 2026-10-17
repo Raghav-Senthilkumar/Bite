@@ -1937,9 +1937,9 @@
   }
 
   .detail-header-grid {
-    grid-template-columns: 140px 1fr;
-    gap: 20px;
-    align-items: center;
+    grid-template-columns: minmax(190px, 34%) minmax(0, 1fr);
+    gap: clamp(20px, 3vw, 30px);
+    align-items: start;
   }
 
   /* Show sticky segmented Ingredients | Steps switcher on tablet & mobile */
@@ -2216,17 +2216,16 @@
   }
 
   .detail-header-grid {
-    grid-template-columns: 84px 1fr;
-    gap: 14px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
     align-items: start;
-    padding-right: 28px;
   }
 
   .detail-cover {
-    width: 84px;
-    height: 98px;
+    width: 100%;
+    height: clamp(200px, 60vw, 280px);
     aspect-ratio: auto;
-    border-radius: 14px;
+    border-radius: 16px;
   }
 
   .detail-meta-pills {
