@@ -10,6 +10,82 @@ interface RecipeDetailProps {
   onSelectCategory: (category: string) => void;
 }
 
+function CopyIcon() {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.1"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+function formatRecipeForClipboard(recipe: Recipe, creatorName?: string): string {
+  const parts: string[] = [];
+
+  parts.push(`# ${recipe.title}`);
+
+  const metadata: string[] = [];
+  if (creatorName) metadata.push(`By: ${creatorName}`);
+  if (recipe.sourceUrl) metadata.push(`Source: ${recipe.sourceUrl}`);
+  if (recipe.cookTimeMinutes) metadata.push(`Cook Time: ${recipe.cookTimeMinutes} minutes`);
+  if (recipe.servings) metadata.push(`Servings: ${recipe.servings}`);
+  if (recipe.categories && recipe.categories.length > 0) {
+    metadata.push(`Categories: ${recipe.categories.join(', ')}`);
+  }
+  if (metadata.length > 0) {
+    parts.push(metadata.join('\n'));
+  }
+
+  if (recipe.description) {
+    parts.push(`## Description\n${recipe.description}`);
+  }
+
+  if (recipe.ingredients && recipe.ingredients.length > 0) {
+    const ingredientLines = recipe.ingredients.map((ing) => {
+      const line = ing.raw?.trim() || ing.name?.trim();
+      return `- ${line}`;
+    });
+    parts.push(`## Ingredients\n${ingredientLines.join('\n')}`);
+  }
+
+  if (recipe.instructions && recipe.instructions.length > 0) {
+    const instructionLines = recipe.instructions.map((step, idx) => {
+      return `${idx + 1}. ${step.trim()}`;
+    });
+    parts.push(`## Instructions\n${instructionLines.join('\n')}`);
+  }
+
+  return parts.join('\n\n');
+}
+
 export function RecipeDetail({
   recipe,
   creator,
@@ -17,10 +93,12 @@ export function RecipeDetail({
   onSelectCategory,
 }: RecipeDetailProps) {
   const [closing, setClosing] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'ingredients' | 'method'>('ingredients');
   const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(() => new Set());
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(() => new Set());
   const closeTimerRef = useRef<number | null>(null);
+  const copyTimerRef = useRef<number | null>(null);
   const onCloseRef = useRef(onClose);
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -49,8 +127,38 @@ export function RecipeDetail({
         window.clearTimeout(closeTimerRef.current);
         closeTimerRef.current = null;
       }
+      if (copyTimerRef.current !== null) {
+        window.clearTimeout(copyTimerRef.current);
+        copyTimerRef.current = null;
+      }
     };
   }, []);
+
+  const handleCopyRecipe = useCallback(async () => {
+    const text = formatRecipeForClipboard(recipe, creator?.displayName);
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopied(true);
+      if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = window.setTimeout(() => {
+        copyTimerRef.current = null;
+        setCopied(false);
+      }, 2000);
+    } catch {
+      // Ignore clipboard write failures.
+    }
+  }, [recipe, creator?.displayName]);
 
   const toggleIngredient = (index: number) => {
     setCheckedIngredients((prev) => {
@@ -132,15 +240,26 @@ export function RecipeDetail({
             </div>
             <h2>{recipe.title}</h2>
             {recipe.description && <p className="detail-description">{recipe.description}</p>}
-            <a
-              className="cabagges-pill py-2.5 px-4 text-xs font-medium gap-1.5 detail-source-link"
-              href={recipe.sourceUrl}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <span>Original Post</span>
-              <span aria-hidden="true">↗</span>
-            </a>
+            <div className="detail-links-row">
+              <a
+                className="cabagges-pill py-2.5 px-4 text-xs font-medium gap-1.5 detail-source-link"
+                href={recipe.sourceUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <span>Original Post</span>
+                <span aria-hidden="true">↗</span>
+              </a>
+              <button
+                type="button"
+                onClick={handleCopyRecipe}
+                className={`detail-circle-btn detail-copy-btn ${copied ? 'is-copied' : ''}`}
+                aria-label={copied ? 'Copied recipe to clipboard' : 'Copy recipe to clipboard'}
+                title={copied ? 'Copied recipe to clipboard' : 'Copy recipe to clipboard'}
+              >
+                {copied ? <CheckIcon /> : <CopyIcon />}
+              </button>
+            </div>
           </div>
         </div>
 
