@@ -2,9 +2,11 @@ import type { FormEvent } from 'react';
 
 import type { Creator } from '../../api';
 import { CreatorImportStatus } from './CreatorImportStatus';
-import { countImports, type ImportProgress } from './importProgress';
+import type { ImportProgress } from './importProgress';
+import type { DashboardPage } from './types';
 
 interface DashboardFooterProps {
+  page: DashboardPage;
   creators: Creator[];
   categories: string[];
   selectedCategory: string | null;
@@ -12,12 +14,10 @@ interface DashboardFooterProps {
   publication: string;
   submitting: boolean;
   importProgress: ImportProgress | null;
-  onResetFilters: () => void;
-  onSelectCategory: (category: string) => void;
-  onSelectCreator: (creatorId: string | null) => void;
-  onCheckCreator: (creatorId: string) => void;
-  onRemoveCreator: (creatorId: string) => void;
-  onRefresh: () => void;
+  onBrowseAll: () => void;
+  onBrowseCategory: (category: string) => void;
+  onBrowseCreator: (creatorId: string) => void;
+  onManagePublications: () => void;
   onPublicationChange: (publication: string) => void;
   onAddCreator: () => void;
   onSignOut: () => Promise<void>;
@@ -25,15 +25,8 @@ interface DashboardFooterProps {
 
 const FALLBACK_CATEGORIES = ['Popular', 'Dinner', 'Lunch', 'Noodles'];
 
-function statusSummary(creator: Creator): string {
-  const { working, settled, failed, total } = countImports(creator);
-  if (!creator.lastSuccessfulCheckAt && total === 0) return 'Checking posts';
-  if (working) return `${settled} of ${total} checked`;
-  if (failed) return `${failed} need attention`;
-  return settled ? `${settled} posts checked` : 'Ready to import';
-}
-
 export function DashboardFooter({
+  page,
   creators,
   categories,
   selectedCategory,
@@ -41,17 +34,15 @@ export function DashboardFooter({
   publication,
   submitting,
   importProgress,
-  onResetFilters,
-  onSelectCategory,
-  onSelectCreator,
-  onCheckCreator,
-  onRemoveCreator,
-  onRefresh,
+  onBrowseAll,
+  onBrowseCategory,
+  onBrowseCreator,
+  onManagePublications,
   onPublicationChange,
   onAddCreator,
   onSignOut,
 }: DashboardFooterProps) {
-  function handleSubmit(event: FormEvent) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     onAddCreator();
   }
@@ -65,19 +56,17 @@ export function DashboardFooter({
           <span className="footer-col-label">Recipes</span>
           <button
             type="button"
-            onClick={onResetFilters}
-            className={`cabagges-pill footer-pill ${!selectedCategory ? 'active-pill' : ''}`}
+            onClick={onBrowseAll}
+            className={`cabagges-pill footer-pill ${page === 'all' && !selectedCategory && !selectedCreatorId ? 'active-pill' : ''}`}
           >
-            Recipe Index
+            All Recipes
           </button>
           {displayedCategories.map((category) => (
             <button
               key={`footer-${category}`}
               type="button"
-              onClick={() => onSelectCategory(category)}
-              className={`cabagges-pill footer-pill ${
-                selectedCategory === category ? 'active-pill' : ''
-              }`}
+              onClick={() => onBrowseCategory(category)}
+              className={`cabagges-pill footer-pill ${page === 'all' && selectedCategory === category ? 'active-pill' : ''}`}
             >
               {category}
             </button>
@@ -85,19 +74,17 @@ export function DashboardFooter({
         </div>
 
         <div className="footer-col">
-          <span className="footer-col-label">Publications</span>
+          <span className="footer-col-label">Writers</span>
           {creators.length === 0 ? (
-            <span className="cabagges-pill footer-pill">None yet</span>
+            <span className="cabagges-pill footer-pill footer-status-pill">None yet</span>
           ) : (
             creators.map((creator) => (
               <button
                 key={`footer-creator-${creator.creatorId}`}
                 type="button"
-                onClick={() => onSelectCreator(
-                  selectedCreatorId === creator.creatorId ? null : creator.creatorId,
-                )}
+                onClick={() => onBrowseCreator(creator.creatorId)}
                 className={`cabagges-pill footer-pill ${
-                  selectedCreatorId === creator.creatorId ? 'active-pill' : ''
+                  page === 'all' && selectedCreatorId === creator.creatorId ? 'active-pill' : ''
                 }`}
               >
                 {creator.displayName}
@@ -107,35 +94,10 @@ export function DashboardFooter({
         </div>
 
         <div className="footer-col">
-          <span className="footer-col-label">Sync Status</span>
-          {creators.map((creator) => (
-            <button
-              key={`status-${creator.creatorId}`}
-              type="button"
-              onClick={() => onCheckCreator(creator.creatorId)}
-              title="Click to check for new posts"
-              className="cabagges-pill footer-pill"
-            >
-              {creator.displayName.split(' ')[0]}: {statusSummary(creator)}
-            </button>
-          ))}
-          <button type="button" onClick={onRefresh} className="cabagges-pill footer-pill">
-            Refresh All
-          </button>
-        </div>
-
-        <div className="footer-col">
           <span className="footer-col-label">Manage</span>
-          {creators.map((creator) => (
-            <button
-              key={`remove-${creator.creatorId}`}
-              type="button"
-              onClick={() => onRemoveCreator(creator.creatorId)}
-              className="cabagges-pill footer-pill"
-            >
-              Unfollow {creator.displayName.split(' ')[0]}
-            </button>
-          ))}
+          <button type="button" onClick={onManagePublications} className="cabagges-pill footer-pill">
+            Manage Publications
+          </button>
           <button
             type="button"
             onClick={() => void onSignOut()}
@@ -164,7 +126,7 @@ export function DashboardFooter({
             onChange={(event) => onPublicationChange(event.target.value)}
             placeholder="e.g. jadsaad.substack.com"
           />
-          <button type="submit" disabled={submitting}>
+          <button type="submit" disabled={submitting || !publication.trim()}>
             {submitting ? 'Adding...' : 'Add'}
           </button>
         </form>

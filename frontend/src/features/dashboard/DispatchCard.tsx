@@ -24,7 +24,7 @@ export function DispatchCard({
   onPublicationChange,
   onSubmit,
 }: DispatchCardProps) {
-  function handleSubmit(event: FormEvent) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     onSubmit();
   }
@@ -77,7 +77,7 @@ export function DispatchCard({
             onChange={(event) => onPublicationChange(event.target.value)}
             placeholder="Substack handle or URL"
           />
-          <button type="submit" disabled={submitting} tabIndex={open ? 0 : -1}>
+          <button type="submit" disabled={submitting || !publication.trim()} tabIndex={open ? 0 : -1}>
             {submitting ? 'Adding' : 'Add'}
           </button>
         </form>

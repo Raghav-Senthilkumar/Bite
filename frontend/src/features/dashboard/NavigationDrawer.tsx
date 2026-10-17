@@ -19,7 +19,6 @@ interface NavigationDrawerProps {
   onClearCategory: () => void;
   onSelectCreator: (creatorId: string | null) => void;
   onOpenDispatch: () => void;
-  onRefresh: () => void;
   onSelectRecipe: (recipe: Recipe) => void;
   onSignOut: () => Promise<void>;
 }
@@ -41,7 +40,6 @@ export function NavigationDrawer({
   onClearCategory,
   onSelectCreator,
   onOpenDispatch,
-  onRefresh,
   onSelectRecipe,
   onSignOut,
 }: NavigationDrawerProps) {
@@ -96,7 +94,7 @@ export function NavigationDrawer({
           </div>
 
           <div className="drawer-col">
-            <h4>Publications</h4>
+            <h4>Browse by writer</h4>
             <div className="drawer-list">
               <button
                 type="button"
@@ -127,7 +125,7 @@ export function NavigationDrawer({
           </div>
 
           <div className="drawer-col">
-            <h4>World</h4>
+            <h4>Manage</h4>
             <div className="drawer-list">
               <button
                 type="button"
@@ -141,13 +139,13 @@ export function NavigationDrawer({
               </button>
               <button
                 type="button"
-                className="drawer-item"
+                className={`drawer-item ${page === 'publications' ? 'active' : ''}`}
                 onClick={() => {
-                  onRefresh();
+                  onNavigate('publications');
                   onClose();
                 }}
               >
-                Refresh Feed
+                Manage Publications
               </button>
             </div>
 

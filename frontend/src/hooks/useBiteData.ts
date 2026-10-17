@@ -129,17 +129,6 @@ export function useBiteData() {
     }
   }
 
-  async function checkCreator(creatorId: string) {
-    try {
-      await apiRequest(`/api/creators/${encodeURIComponent(creatorId)}/check`, {
-        method: 'POST',
-      });
-      await loadData(true);
-    } catch (caught) {
-      setError(errorMessage(caught, 'Could not check this publication.'));
-    }
-  }
-
   async function removeCreator(creatorId: string) {
     try {
       await apiRequest(`/api/creators/${encodeURIComponent(creatorId)}`, {
@@ -175,7 +164,6 @@ export function useBiteData() {
     dismissImport: () => rememberImport(null),
     loadData,
     addCreator,
-    checkCreator,
     removeCreator,
   };
 }

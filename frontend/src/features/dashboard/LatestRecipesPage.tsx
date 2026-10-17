@@ -16,6 +16,7 @@ interface LatestRecipesPageProps {
   onSelectCategory: (category: string) => void;
   onSelectRecipe: (recipe: Recipe) => void;
   onSeeAll: () => void;
+  onManagePublications: () => void;
   importProgress: ImportProgress | null;
 }
 
@@ -32,6 +33,7 @@ export function LatestRecipesPage({
   onSelectCategory,
   onSelectRecipe,
   onSeeAll,
+  onManagePublications,
   importProgress,
 }: LatestRecipesPageProps) {
   const hasFilters = Boolean(search || selectedCategory || selectedCreatorId);
@@ -107,8 +109,17 @@ export function LatestRecipesPage({
               ? 'Recipes will show up here as Bite finishes checking posts.'
               : hasFilters
                 ? 'Clear your active filter or try another ingredient.'
-                : 'Use Add New Creator or the footer below to add a public Substack URL (e.g. jadsaad.substack.com).'}
+                : 'Follow a public Substack writer to start collecting recipes.'}
           </p>
+          {!hasFilters && creators.length === 0 && (
+            <button
+              type="button"
+              className="cabagges-pill py-2.5 px-4 text-xs font-medium"
+              onClick={onManagePublications}
+            >
+              Manage Publications →
+            </button>
+          )}
         </div>
       )}
     </main>

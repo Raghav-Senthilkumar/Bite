@@ -12,11 +12,24 @@ import { DashboardFooter } from './DashboardFooter';
 import { DashboardHeader } from './DashboardHeader';
 import { DispatchCard } from './DispatchCard';
 import { LatestRecipesPage } from './LatestRecipesPage';
+import { PublicationsPage } from './PublicationsPage';
 import type { DashboardPage } from './types';
 
 interface DashboardProps {
   user: AuthUser;
   onSignOut: () => Promise<void>;
+}
+
+const PAGE_PATHS: Record<DashboardPage, string> = {
+  index: '/',
+  all: '/recipes',
+  publications: '/publications',
+};
+
+function pageFromPath(pathname: string): DashboardPage {
+  if (pathname === '/recipes') return 'all';
+  if (pathname === '/publications') return 'publications';
+  return 'index';
 }
 
 export function Dashboard({ user, onSignOut }: DashboardProps) {
@@ -29,16 +42,12 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
     importProgress,
     clearError,
     dismissImport,
-    loadData,
     addCreator,
-    checkCreator,
     removeCreator,
   } = useBiteData();
   const latestFilters = useRecipeFilters(recipes);
   const allFilters = useRecipeFilters(recipes);
-  const [page, setPage] = useState<DashboardPage>(() =>
-    window.location.pathname === '/recipes' ? 'all' : 'index',
-  );
+  const [page, setPage] = useState<DashboardPage>(() => pageFromPath(window.location.pathname));
   const {
     search,
     setSearch,
@@ -48,7 +57,7 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
     setSelectedCreatorId,
     selectCategory,
     filteredRecipes,
-  } = page === 'all' ? allFilters : latestFilters;
+  } = page === 'index' ? latestFilters : allFilters;
   const [publication, setPublication] = useState('');
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -110,7 +119,10 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
 
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (!document.startViewTransition || reduceMotion) {
-      flushSync(() => setPage(nextPage));
+      flushSync(() => {
+        setPage(nextPage);
+        if (nextPage === 'publications') setSearchOpen(false);
+      });
       window.scrollTo({ top: 0, behavior: 'instant' });
       return;
     }
@@ -119,6 +131,7 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
       flushSync(() => {
         setNativePageTransition(true);
         setPage(nextPage);
+        if (nextPage === 'publications') setSearchOpen(false);
       });
       window.scrollTo({ top: 0, behavior: 'instant' });
     });
@@ -126,14 +139,14 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
 
   useEffect(() => {
     const onPopState = () => {
-      showPage(window.location.pathname === '/recipes' ? 'all' : 'index');
+      showPage(pageFromPath(window.location.pathname));
     };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, [showPage]);
 
   const navigate = useCallback((nextPage: DashboardPage) => {
-    const targetPath = nextPage === 'all' ? '/recipes' : '/';
+    const targetPath = PAGE_PATHS[nextPage];
     if (window.location.pathname !== targetPath) {
       window.history.pushState({}, '', targetPath);
     }
@@ -180,15 +193,49 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
     window.setTimeout(() => setHeaderSpring(false), 760);
   }
 
-  async function handleAddCreator() {
+  async function handleAddCreator(publication: string) {
+    return addCreator(publication);
+  }
+
+  async function handleQuickAddCreator() {
     if (await addCreator(publication)) setPublication('');
   }
 
   async function handleRemoveCreator(creatorId: string) {
-    if (await removeCreator(creatorId)) {
+    const removed = await removeCreator(creatorId);
+    if (removed) {
       latestFilters.setSelectedCreatorId((current) => current === creatorId ? null : current);
       allFilters.setSelectedCreatorId((current) => current === creatorId ? null : current);
     }
+    return removed;
+  }
+
+  function handleViewCreatorRecipes(creatorId: string) {
+    allFilters.setSearch('');
+    allFilters.setSelectedCategory(null);
+    allFilters.setSelectedCreatorId(creatorId);
+    navigate('all');
+  }
+
+  function browseAllRecipes() {
+    allFilters.setSearch('');
+    allFilters.setSelectedCategory(null);
+    allFilters.setSelectedCreatorId(null);
+    navigate('all');
+  }
+
+  function browseCategory(category: string) {
+    allFilters.setSearch('');
+    allFilters.setSelectedCategory(category);
+    allFilters.setSelectedCreatorId(null);
+    navigate('all');
+  }
+
+  function browseCreator(creatorId: string) {
+    allFilters.setSearch('');
+    allFilters.setSelectedCategory(null);
+    allFilters.setSelectedCreatorId(creatorId);
+    navigate('all');
   }
 
   const handleCloseRecipe = useCallback(() => {
@@ -219,11 +266,24 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
         onCloseSearch={() => setSearchOpen(false)}
         onSearchChange={setSearch}
         onNavigate={navigate}
-        onSelectCategory={selectCategory}
+        onSelectCategory={(category) => {
+          if (page === 'publications') {
+            allFilters.selectCategory(category);
+            navigate('all');
+          } else {
+            selectCategory(category);
+          }
+        }}
         onClearCategory={() => setSelectedCategory(null)}
-        onSelectCreator={setSelectedCreatorId}
+        onSelectCreator={(creatorId) => {
+          if (page === 'publications') {
+            allFilters.setSelectedCreatorId(creatorId);
+            navigate('all');
+          } else {
+            setSelectedCreatorId(creatorId);
+          }
+        }}
         onOpenDispatch={() => setDispatchOpen(true)}
-        onRefresh={() => void loadData()}
         onSelectRecipe={setSelectedRecipe}
         onSignOut={onSignOut}
         spring={headerSpring}
@@ -259,9 +319,10 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
           onSelectCategory={selectCategory}
           onSelectRecipe={setSelectedRecipe}
           onSeeAll={() => navigate('all')}
+          onManagePublications={() => navigate('publications')}
           importProgress={importProgress}
         />
-      ) : (
+      ) : page === 'all' ? (
         <AllRecipesPage
           creators={creators}
           recipes={filteredRecipes}
@@ -277,27 +338,33 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
           onSelectCreator={setSelectedCreatorId}
           onSelectRecipe={setSelectedRecipe}
         />
+      ) : (
+        <PublicationsPage
+          creators={creators}
+          recipeCounts={creatorRecipeCounts}
+          loading={loading}
+          submitting={submitting}
+          onAdd={handleAddCreator}
+          onUnfollow={handleRemoveCreator}
+          onViewRecipes={handleViewCreatorRecipes}
+        />
       )}
 
       <DashboardFooter
+        page={page}
         creators={creators}
         categories={categories}
-        selectedCategory={selectedCategory}
-        selectedCreatorId={selectedCreatorId}
+        selectedCategory={allFilters.selectedCategory}
+        selectedCreatorId={allFilters.selectedCreatorId}
         publication={publication}
         submitting={submitting}
         importProgress={importProgress}
-        onResetFilters={() => {
-          setSelectedCategory(null);
-          setSelectedCreatorId(null);
-        }}
-        onSelectCategory={selectCategory}
-        onSelectCreator={setSelectedCreatorId}
-        onCheckCreator={(creatorId) => void checkCreator(creatorId)}
-        onRemoveCreator={(creatorId) => void handleRemoveCreator(creatorId)}
-        onRefresh={() => void loadData()}
+        onBrowseAll={browseAllRecipes}
+        onBrowseCategory={browseCategory}
+        onBrowseCreator={browseCreator}
+        onManagePublications={() => navigate('publications')}
         onPublicationChange={setPublication}
-        onAddCreator={() => void handleAddCreator()}
+        onAddCreator={() => void handleQuickAddCreator()}
         onSignOut={onSignOut}
       />
 
@@ -309,7 +376,7 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
         onOpen={() => setDispatchOpen(true)}
         onClose={() => setDispatchOpen(false)}
         onPublicationChange={setPublication}
-        onSubmit={() => void handleAddCreator()}
+        onSubmit={() => void handleQuickAddCreator()}
       />
 
       {selectedRecipe && (

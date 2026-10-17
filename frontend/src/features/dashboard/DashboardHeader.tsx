@@ -26,7 +26,6 @@ interface DashboardHeaderProps {
   onClearCategory: () => void;
   onSelectCreator: (creatorId: string | null) => void;
   onOpenDispatch: () => void;
-  onRefresh: () => void;
   onSelectRecipe: (recipe: Recipe) => void;
   onSignOut: () => Promise<void>;
   spring: boolean;
@@ -68,7 +67,7 @@ export function DashboardHeader(props: DashboardHeaderProps) {
     return () => observer.disconnect();
   }, []);
 
-  const searchVisible = searchOpen || Boolean(search);
+  const searchVisible = page !== 'publications' && (searchOpen || Boolean(search));
 
   return (
     <>
@@ -93,7 +92,7 @@ export function DashboardHeader(props: DashboardHeaderProps) {
               </span>
               <span>bite.world</span>
             </button>
-            {page === 'all' && (
+            {page !== 'index' && (
               <button
                 type="button"
                 className="topbar-link hide-on-mobile"
@@ -105,36 +104,38 @@ export function DashboardHeader(props: DashboardHeaderProps) {
           </div>
 
           <div className="topbar-actions">
-            <div className={`search-shell ${searchVisible ? 'is-open' : ''}`}>
-              <button
-                type="button"
-                className="topbar-link search-toggle-btn"
-                onClick={onToggleSearch}
-                aria-expanded={searchOpen}
-              >
-                Search
-              </button>
-              <label className="search-inline">
-                <input
-                  ref={searchInputRef}
-                  value={search}
-                  onChange={(event) => onSearchChange(event.target.value)}
-                  placeholder="Search recipes..."
-                  tabIndex={searchVisible ? 0 : -1}
-                />
+            {page !== 'publications' && (
+              <div className={`search-shell ${searchVisible ? 'is-open' : ''}`}>
                 <button
                   type="button"
-                  aria-label="Clear search"
-                  tabIndex={searchVisible ? 0 : -1}
-                  onClick={() => {
-                    onSearchChange('');
-                    onCloseSearch();
-                  }}
+                  className="topbar-link search-toggle-btn"
+                  onClick={onToggleSearch}
+                  aria-expanded={searchOpen}
                 >
-                  ×
+                  Search
                 </button>
-              </label>
-            </div>
+                <label className="search-inline">
+                  <input
+                    ref={searchInputRef}
+                    value={search}
+                    onChange={(event) => onSearchChange(event.target.value)}
+                    placeholder="Search recipes..."
+                    tabIndex={searchVisible ? 0 : -1}
+                  />
+                  <button
+                    type="button"
+                    aria-label="Clear search"
+                    tabIndex={searchVisible ? 0 : -1}
+                    onClick={() => {
+                      onSearchChange('');
+                      onCloseSearch();
+                    }}
+                  >
+                    ×
+                  </button>
+                </label>
+              </div>
+            )}
             <button
               type="button"
               className={`topbar-link topbar-recipes-link ${page === 'all' ? 'active' : ''}`}
@@ -144,8 +145,8 @@ export function DashboardHeader(props: DashboardHeaderProps) {
             </button>
             <button
               type="button"
-              className={`topbar-link hide-on-mobile ${menuOpen ? 'active' : ''}`}
-              onClick={onToggleMenu}
+              className={`topbar-link hide-on-mobile ${page === 'publications' ? 'active' : ''}`}
+              onClick={() => onNavigate('publications')}
             >
               Publications ({creators.length})
             </button>

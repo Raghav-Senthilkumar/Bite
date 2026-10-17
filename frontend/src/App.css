@@ -901,6 +901,273 @@
   }
 }
 
+/* Publications */
+.publications-page {
+  max-width: 1720px;
+  margin: 0 auto;
+  padding: 28px 32px 56px;
+  min-height: 65vh;
+}
+
+.publications-heading-block {
+  margin-bottom: 32px;
+}
+
+.publications-eyebrow {
+  color: var(--green-dark);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.publications-heading-block .all-recipes-heading {
+  margin-top: 12px;
+}
+
+.publications-heading-block p {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.publication-add-card {
+  display: grid;
+  grid-template-columns: 1fr minmax(340px, 0.9fr);
+  align-items: center;
+  gap: 32px;
+  padding: 30px 34px;
+  border-radius: 24px;
+  background: var(--lime);
+}
+
+.publication-add-card h2 {
+  margin: 8px 0 10px;
+  color: var(--ink);
+  font-size: clamp(22px, 2.6vw, 32px);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+
+.publication-add-card p {
+  max-width: 460px;
+  color: rgba(46, 46, 46, 0.72);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.publication-add-card form label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.publication-add-input-row {
+  display: flex;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 14px;
+  background: #FFFFFF;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
+}
+
+.publication-add-input-row:focus-within {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.publication-add-input-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.publication-add-input-row button {
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: var(--green);
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background-color 180ms ease, transform 180ms ease;
+}
+
+.publication-add-input-row button:hover:not(:disabled) {
+  background: var(--green-dark);
+  transform: translateY(-1px);
+}
+
+.publication-add-input-row button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.publications-list-section {
+  margin-top: 48px;
+}
+
+.publications-list-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.publications-list-heading h2 {
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.publications-list-heading span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.publication-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 18px;
+}
+
+.publication-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: #FFFFFF;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.025);
+}
+
+.publication-card-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.publication-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: var(--mint);
+  color: var(--green-dark);
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.publication-identity {
+  min-width: 0;
+}
+
+.publication-identity h3 {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.publication-identity a,
+.publication-identity span {
+  display: block;
+  overflow: hidden;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.publication-identity a:hover {
+  color: var(--green-dark);
+}
+
+.publication-count {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 26px;
+}
+
+.publication-count strong {
+  font-size: 38px;
+  font-weight: 500;
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+
+.publication-count span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.publication-status {
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.publication-status::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: var(--green);
+}
+
+.publication-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: auto;
+  padding-top: 24px;
+}
+
+.publication-card-actions button {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.publication-card-actions button:first-child {
+  color: var(--green-dark);
+}
+
+.publication-card-actions button:last-child {
+  color: var(--muted);
+}
+
+.publication-card-actions button:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.publication-card-actions button:last-child:hover:not(:disabled) {
+  color: #9A3412;
+}
+
+.publication-card-actions button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
 /* Footer Directory (Screenshot 1) */
 .bite-footer {
   max-width: 1520px;
@@ -913,7 +1180,7 @@
 
 .footer-pill-columns {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 24px;
 }
 
@@ -934,6 +1201,13 @@
   padding: 9px 16px;
   font-size: 13px;
   border-radius: 12px;
+}
+
+.footer-status-pill,
+.footer-status-pill:hover {
+  background-color: var(--lime);
+  transform: none;
+  cursor: default;
 }
 
 .footer-dispatch-col {
@@ -983,6 +1257,11 @@
 
 .dispatch-input-bar button:hover {
   color: var(--green);
+}
+
+.dispatch-input-bar button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* Floating Tilted Lime Card ("Bite Dispatch") with Springy Expand & Close */
@@ -1652,6 +1931,11 @@
     grid-column: 1 / -1;
   }
 
+  .publication-add-card {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
   .bite-footer {
     grid-template-columns: 1fr;
     margin-top: 72px;
@@ -1862,6 +2146,23 @@
 
   .empty-cookbook h3 {
     font-size: 18px;
+  }
+
+  .publications-page {
+    padding: 22px 16px 36px;
+  }
+
+  .publication-add-card {
+    padding: 22px 20px;
+    border-radius: 20px;
+  }
+
+  .publications-list-section {
+    margin-top: 36px;
+  }
+
+  .publication-grid {
+    grid-template-columns: 1fr;
   }
 
   .bite-footer {

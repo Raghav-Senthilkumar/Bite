@@ -1,1 +1,1 @@
-export type DashboardPage = 'index' | 'all';
+export type DashboardPage = 'index' | 'all' | 'publications';
