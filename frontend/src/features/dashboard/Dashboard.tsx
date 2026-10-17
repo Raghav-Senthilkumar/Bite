@@ -34,6 +34,11 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
     checkCreator,
     removeCreator,
   } = useBiteData();
+  const latestFilters = useRecipeFilters(recipes);
+  const allFilters = useRecipeFilters(recipes);
+  const [page, setPage] = useState<DashboardPage>(() =>
+    window.location.pathname === '/recipes' ? 'all' : 'index',
+  );
   const {
     search,
     setSearch,
@@ -43,15 +48,12 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
     setSelectedCreatorId,
     selectCategory,
     filteredRecipes,
-  } = useRecipeFilters(recipes);
+  } = page === 'all' ? allFilters : latestFilters;
   const [publication, setPublication] = useState('');
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [dispatchOpen, setDispatchOpen] = useState(false);
-  const [page, setPage] = useState<DashboardPage>(() =>
-    window.location.pathname === '/recipes' ? 'all' : 'index',
-  );
   const [nativePageTransition, setNativePageTransition] = useState(false);
   const lockedScrollY = useRef(0);
   const importBannerRef = useRef<HTMLDivElement>(null);
@@ -184,7 +186,8 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
 
   async function handleRemoveCreator(creatorId: string) {
     if (await removeCreator(creatorId)) {
-      setSelectedCreatorId((current) => current === creatorId ? null : current);
+      latestFilters.setSelectedCreatorId((current) => current === creatorId ? null : current);
+      allFilters.setSelectedCreatorId((current) => current === creatorId ? null : current);
     }
   }
 
@@ -193,8 +196,8 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
   }, []);
 
   const latestRecipes = useMemo(
-    () => filteredRecipes.slice(0, 10),
-    [filteredRecipes],
+    () => latestFilters.filteredRecipes.slice(0, 10),
+    [latestFilters.filteredRecipes],
   );
 
   return (
