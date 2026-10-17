@@ -37,7 +37,7 @@
 .overscroll-x-contain { overscroll-behavior-x: contain; }
 .touch-pan-y { touch-action: pan-y; }
 .will-change-transform { will-change: transform; }
-.select-none { user-select: none; }
+.select-none { -webkit-user-select: none; user-select: none; }
 .pointer-events-none { pointer-events: none; }
 .cursor-pointer { cursor: pointer; }
 .cursor-grab { cursor: grab; }
@@ -217,6 +217,7 @@
   inset: 0;
   z-index: 38;
   background: rgba(20, 24, 21, 0.14);
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
   opacity: 0;
   pointer-events: none;
@@ -236,6 +237,7 @@
   z-index: 40;
   padding-right: var(--scrollbar-gap, 0px);
   background: rgba(249, 249, 246, 0.9);
+  -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   transition: background-color 380ms cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 420ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -739,17 +741,9 @@
   animation: pageReveal 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.native-page-transition .page-view-transition,
-.native-page-transition .all-recipe-card {
-  animation: none;
-}
-
-::view-transition-old(root) {
+.page-is-leaving .page-view-transition {
   animation: pageLeave 180ms ease-in both;
-}
-
-::view-transition-new(root) {
-  animation: pageReveal 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  pointer-events: none;
 }
 
 @keyframes pageLeave {
@@ -772,8 +766,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .page-view-transition,
-  ::view-transition-old(root),
-  ::view-transition-new(root) {
+  .page-is-leaving .page-view-transition {
     animation: none;
   }
 }
@@ -875,10 +868,6 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
   gap: 28px 22px;
-}
-
-.all-recipe-card {
-  animation: pageReveal 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .recipe-pagination {
@@ -1419,6 +1408,7 @@
   inset: 0;
   z-index: 50;
   background: rgba(20, 24, 21, 0.52);
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   display: grid;
   place-items: center;

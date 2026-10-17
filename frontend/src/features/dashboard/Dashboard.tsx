@@ -63,7 +63,8 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [dispatchOpen, setDispatchOpen] = useState(false);
-  const [nativePageTransition, setNativePageTransition] = useState(false);
+  const [leavingPage, setLeavingPage] = useState(false);
+  const pageTransitionTimer = useRef<number | null>(null);
   const lockedScrollY = useRef(0);
   const importBannerRef = useRef<HTMLDivElement>(null);
   const [headerSpring, setHeaderSpring] = useState(false);
@@ -111,31 +112,43 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
   }, [menuOpen, selectedRecipe]);
 
   const showPage = useCallback((nextPage: DashboardPage) => {
+    if (pageTransitionTimer.current !== null) {
+      window.clearTimeout(pageTransitionTimer.current);
+      pageTransitionTimer.current = null;
+    }
     lockedScrollY.current = 0;
     if (nextPage === page) {
+      setLeavingPage(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!document.startViewTransition || reduceMotion) {
+    const finishNavigation = () => {
       flushSync(() => {
         setPage(nextPage);
+        setLeavingPage(false);
         if (nextPage === 'publications') setSearchOpen(false);
       });
       window.scrollTo({ top: 0, behavior: 'instant' });
+    };
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      finishNavigation();
       return;
     }
 
-    document.startViewTransition(() => {
-      flushSync(() => {
-        setNativePageTransition(true);
-        setPage(nextPage);
-        if (nextPage === 'publications') setSearchOpen(false);
-      });
-      window.scrollTo({ top: 0, behavior: 'instant' });
-    });
+    setLeavingPage(true);
+    pageTransitionTimer.current = window.setTimeout(() => {
+      pageTransitionTimer.current = null;
+      finishNavigation();
+    }, 180);
   }, [page]);
+
+  useEffect(() => () => {
+    if (pageTransitionTimer.current !== null) {
+      window.clearTimeout(pageTransitionTimer.current);
+    }
+  }, []);
 
   useEffect(() => {
     const onPopState = () => {
@@ -248,7 +261,7 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
   );
 
   return (
-    <div className={nativePageTransition ? 'native-page-transition' : undefined}>
+    <div className={leavingPage ? 'page-is-leaving' : undefined}>
       <DashboardHeader
         user={user}
         page={page}
