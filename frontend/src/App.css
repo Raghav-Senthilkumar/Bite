@@ -734,9 +734,29 @@
   100% { transform: translateX(340%); }
 }
 
-/* Smooth Page View Transition */
+/* Page navigation */
 .page-view-transition {
-  animation: pageReveal 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: pageReveal 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.native-page-transition .page-view-transition,
+.native-page-transition .all-recipe-card {
+  animation: none;
+}
+
+::view-transition-old(root) {
+  animation: pageLeave 180ms ease-in both;
+}
+
+::view-transition-new(root) {
+  animation: pageReveal 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes pageLeave {
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
 }
 
 @keyframes pageReveal {
@@ -747,6 +767,14 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-view-transition,
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
   }
 }
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import type { AuthUser } from 'aws-amplify/auth';
 
 import type { Recipe } from '../../api';
@@ -51,6 +52,7 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
   const [page, setPage] = useState<DashboardPage>(() =>
     window.location.pathname === '/recipes' ? 'all' : 'index',
   );
+  const [nativePageTransition, setNativePageTransition] = useState(false);
   const lockedScrollY = useRef(0);
   const importBannerRef = useRef<HTMLDivElement>(null);
   const [headerSpring, setHeaderSpring] = useState(false);
@@ -60,14 +62,6 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
     if (importProgress?.phase !== 'connecting') return;
     importBannerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [importProgress?.phase]);
-
-  useEffect(() => {
-    const onPopState = () => {
-      setPage(window.location.pathname === '/recipes' ? 'all' : 'index');
-    };
-    window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
-  }, []);
 
   useEffect(() => {
     const locked = menuOpen || selectedRecipe !== null;
@@ -105,15 +99,44 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
     };
   }, [menuOpen, selectedRecipe]);
 
+  const showPage = useCallback((nextPage: DashboardPage) => {
+    lockedScrollY.current = 0;
+    if (nextPage === page) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!document.startViewTransition || reduceMotion) {
+      flushSync(() => setPage(nextPage));
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      return;
+    }
+
+    document.startViewTransition(() => {
+      flushSync(() => {
+        setNativePageTransition(true);
+        setPage(nextPage);
+      });
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    });
+  }, [page]);
+
+  useEffect(() => {
+    const onPopState = () => {
+      showPage(window.location.pathname === '/recipes' ? 'all' : 'index');
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [showPage]);
+
   const navigate = useCallback((nextPage: DashboardPage) => {
     const targetPath = nextPage === 'all' ? '/recipes' : '/';
     if (window.location.pathname !== targetPath) {
       window.history.pushState({}, '', targetPath);
     }
-    setPage(nextPage);
-    lockedScrollY.current = 0;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
+    showPage(nextPage);
+  }, [showPage]);
 
   const categories = useMemo(() => {
     const counts = new Map<string, number>();
@@ -175,7 +198,7 @@ export function Dashboard({ user, onSignOut }: DashboardProps) {
   );
 
   return (
-    <div>
+    <div className={nativePageTransition ? 'native-page-transition' : undefined}>
       <DashboardHeader
         user={user}
         page={page}
