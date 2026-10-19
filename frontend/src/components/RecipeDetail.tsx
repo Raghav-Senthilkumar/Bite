@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { Creator, Recipe } from '../api';
 import { RecipeImage } from './RecipeImage';
+import { formatQuantity, scaledIngredient } from './recipeScaling';
 
 interface RecipeDetailProps {
   recipe: Recipe;
@@ -47,7 +48,7 @@ function CheckIcon() {
   );
 }
 
-function formatRecipeForClipboard(recipe: Recipe, creatorName?: string): string {
+function formatRecipeForClipboard(recipe: Recipe, multiplier: number, creatorName?: string): string {
   const parts: string[] = [];
 
   parts.push(`# ${recipe.title}`);
@@ -56,7 +57,8 @@ function formatRecipeForClipboard(recipe: Recipe, creatorName?: string): string 
   if (creatorName) metadata.push(`By: ${creatorName}`);
   if (recipe.sourceUrl) metadata.push(`Source: ${recipe.sourceUrl}`);
   if (recipe.cookTimeMinutes) metadata.push(`Cook Time: ${recipe.cookTimeMinutes} minutes`);
-  if (recipe.servings) metadata.push(`Servings: ${recipe.servings}`);
+  if (recipe.servings) metadata.push(`Servings: ${formatQuantity(recipe.servings * multiplier)}`);
+  if (multiplier > 1) metadata.push(`Ingredients scaled: ${multiplier}×`);
   if (recipe.categories && recipe.categories.length > 0) {
     metadata.push(`Categories: ${recipe.categories.join(', ')}`);
   }
@@ -70,7 +72,7 @@ function formatRecipeForClipboard(recipe: Recipe, creatorName?: string): string 
 
   if (recipe.ingredients && recipe.ingredients.length > 0) {
     const ingredientLines = recipe.ingredients.map((ing) => {
-      const line = ing.raw?.trim() || ing.name?.trim();
+      const line = scaledIngredient(ing, multiplier).text;
       return `- ${line}`;
     });
     parts.push(`## Ingredients\n${ingredientLines.join('\n')}`);
@@ -95,6 +97,7 @@ export function RecipeDetail({
   const [closing, setClosing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'ingredients' | 'method'>('ingredients');
+  const [multiplier, setMultiplier] = useState(1);
   const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(() => new Set());
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(() => new Set());
   const closeTimerRef = useRef<number | null>(null);
@@ -135,7 +138,7 @@ export function RecipeDetail({
   }, []);
 
   const handleCopyRecipe = useCallback(async () => {
-    const text = formatRecipeForClipboard(recipe, creator?.displayName);
+    const text = formatRecipeForClipboard(recipe, multiplier, creator?.displayName);
     try {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);
@@ -158,7 +161,12 @@ export function RecipeDetail({
     } catch {
       // Ignore clipboard write failures.
     }
-  }, [recipe, creator?.displayName]);
+  }, [recipe, multiplier, creator?.displayName]);
+
+  const changeMultiplier = (change: number) => {
+    setMultiplier((current) => Math.min(5, Math.max(1, current + change)));
+    setCopied(false);
+  };
 
   const toggleIngredient = (index: number) => {
     setCheckedIngredients((prev) => {
@@ -220,7 +228,7 @@ export function RecipeDetail({
               )}
               {recipe.servings && (
                 <span className="cabagges-pill py-2 px-4 text-xs">
-                  Serves {recipe.servings}
+                  Serves {formatQuantity(recipe.servings * multiplier)}
                 </span>
               )}
               {recipe.categories.map((category) => (
@@ -254,8 +262,8 @@ export function RecipeDetail({
                 type="button"
                 onClick={handleCopyRecipe}
                 className={`detail-circle-btn detail-copy-btn ${copied ? 'is-copied' : ''}`}
-                aria-label={copied ? 'Copied recipe to clipboard' : 'Copy recipe to clipboard'}
-                title={copied ? 'Copied recipe to clipboard' : 'Copy recipe to clipboard'}
+                aria-label={copied ? 'Copied recipe to clipboard' : `Copy ${multiplier}× recipe to clipboard`}
+                title={copied ? 'Copied recipe to clipboard' : `Copy ${multiplier}× recipe to clipboard`}
               >
                 {copied ? <CheckIcon /> : <CopyIcon />}
               </button>
@@ -300,9 +308,33 @@ export function RecipeDetail({
               <h3>Ingredients ({recipe.ingredients.length})</h3>
               <span className="detail-section-hint">Tap to check off</span>
             </div>
+            <div className="detail-scale-row">
+              <span className="detail-scale-label">Scale ingredients</span>
+              <div className="detail-scale-controls" role="group" aria-label="Ingredient multiplier">
+                <button
+                  type="button"
+                  aria-label="Decrease ingredient multiplier"
+                  disabled={multiplier === 1}
+                  onClick={() => changeMultiplier(-1)}
+                >
+                  −
+                </button>
+                <output aria-live="polite" aria-label="Ingredient multiplier">{multiplier}×</output>
+                <button
+                  type="button"
+                  aria-label="Increase ingredient multiplier"
+                  disabled={multiplier === 5}
+                  onClick={() => changeMultiplier(1)}
+                >
+                  +
+                </button>
+              </div>
+            </div>
             <ul className="ingredient-list">
               {recipe.ingredients.map((ingredient, index) => {
                 const isChecked = checkedIngredients.has(index);
+                const scaled = scaledIngredient(ingredient, multiplier);
+                const name = ingredient.name || 'Ingredient';
                 return (
                   <li
                     key={`${ingredient.raw}-${index}`}
@@ -313,10 +345,11 @@ export function RecipeDetail({
                       {isChecked ? '✓' : ''}
                     </span>
                     <div className="ingredient-text">
-                      <strong>{ingredient.name || 'Ingredient'}</strong>
-                      {ingredient.raw && ingredient.raw !== ingredient.name && (
-                        <span>{ingredient.raw}</span>
+                      <strong>{name}</strong>
+                      {scaled.text !== name && (
+                        <span>{scaled.text}</span>
                       )}
+                      {scaled.original && <span className="ingredient-original">Original: {scaled.original}</span>}
                     </div>
                   </li>
                 );

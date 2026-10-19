@@ -1719,6 +1719,60 @@
   color: rgba(46, 46, 46, 0.45);
 }
 
+.detail-scale-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--bg);
+}
+
+.detail-scale-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.detail-scale-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.detail-scale-controls button {
+  width: 29px;
+  height: 29px;
+  border-radius: 8px;
+  background: #FFFFFF;
+  border: 1px solid var(--line);
+  font-size: 18px;
+  line-height: 1;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.detail-scale-controls button:hover:not(:disabled) {
+  background: var(--lime);
+  color: var(--green-dark);
+}
+
+.detail-scale-controls button:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.detail-scale-controls output {
+  min-width: 32px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 .ingredient-list,
 .instruction-list {
   list-style: none;
@@ -1798,6 +1852,12 @@
   display: block;
   font-size: 12px;
   color: var(--muted);
+}
+
+.ingredient-text .ingredient-original {
+  margin-top: 3px;
+  font-size: 11px;
+  opacity: 0.72;
 }
 
 .instruction-list {
