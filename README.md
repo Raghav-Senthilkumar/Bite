@@ -20,6 +20,7 @@ Instead of hunting through inbox archives, scrolling past personal essays, or sq
 
 ## Architecture
 
+- **Design System**: Mobile specifications, color tokens, typography scales, and motion physics documented in [docs/bite-design-system.md](docs/bite-design-system.md).
 - **Frontend**: React 19 single-page app built with Vite, TypeScript, and Tailwind CSS.
 - **Backend**: Python 3.12 AWS Lambda functions managed with `uv`.
 - **Infrastructure**: AWS CDK in TypeScript targeting `us-east-1`.
